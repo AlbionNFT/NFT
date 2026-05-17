@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NoFreeThinkers | Albion Online Guild</title>
 
-<meta name="title" content="NoFreeThinkers | Albion Online Guild">
+    <meta name="title" content="NoFreeThinkers | Albion Online Guild">
     <meta name="description" content="A dedicated Outlands brotherhood forging our legacy in Albion Online. View active roster statistics, custom ZvZ builds, and combat analytics telemetry charts.">
     
     <meta property="og:type" content="website">
@@ -47,6 +47,21 @@
             background: radial-gradient(circle, rgba(217,119,6,0.15) 0%, rgba(0,0,0,0) 70%);
             z-index: -1;
             filter: blur(40px);
+        }
+        /* Custom scrollbar styling for the leaderboard container */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(251, 191, 36, 0.3);
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(251, 191, 36, 0.5);
         }
     </style>
 </head>
@@ -105,7 +120,6 @@
             </section>
 
             <section id="stats" class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
-                
                 <div class="glass-panel p-6 rounded-2xl shadow-xl flex flex-col justify-between hover:border-amber-500/30 transition-all duration-300 group">
                     <div class="flex items-center justify-between mb-4">
                         <span class="text-xs uppercase tracking-wider text-amber-500 font-bold">Affiliation</span>
@@ -143,8 +157,36 @@
                 </div>
             </section>
 
+            <section id="leaderboard-section" class="max-w-5xl mx-auto w-full">
+                <div class="glass-panel rounded-2xl p-6 shadow-xl border border-amber-500/10">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-800 pb-4 mb-4 gap-2">
+                        <div>
+                            <h3 class="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                                <i class="fas fa-trophy text-amber-400"></i> Top Weekly Outlands Kills
+                            </h3>
+                            <p class="text-xs text-gray-400 mt-0.5">Ranked by single target victim execution value</p>
+                        </div>
+                        <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] px-2.5 py-1 rounded-md font-bold tracking-widest uppercase">
+                            Outlands Cluster
+                        </span>
+                    </div>
+
+                    <div class="w-full">
+                        <div class="grid grid-cols-12 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-900 pb-3 font-semibold px-4">
+                            <div class="col-span-2 text-center">Rank</div>
+                            <div class="col-span-4">Killer Name</div>
+                            <div class="col-span-3">Victim Name</div>
+                            <div class="col-span-3 text-right">Kill Fame</div>
+                        </div>
+                        
+                        <div id="kills-leaderboard-container" class="divide-y divide-gray-900/50 max-h-[400px] overflow-y-auto custom-scrollbar mt-2">
+                            <p class="text-center py-8 text-xs text-gray-500 tracking-wide italic">No high priority targets eliminated yet this week.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="community" class="max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-                
                 <div class="glass-panel p-8 rounded-2xl flex flex-col justify-center space-y-4">
                     <div class="flex items-center justify-between border-b border-gray-800 pb-3">
                         <h3 class="text-2xl font-bold text-white tracking-wide">Recruiting Requirements</h3>
@@ -222,6 +264,7 @@
         const githubUser = 'AlbionNFT';
         const repoName = 'NFT'; 
         const localJsonUrl = `https://${githubUser}.github.io/${repoName}/guild-data.json?t=${Date.now()}`;
+        const topKillsJsonUrl = `https://${githubUser}.github.io/${repoName}/top-kills.json?t=${Date.now()}`;
 
         function formatCompactFame(num) {
             if (!num || isNaN(num)) return "0";
@@ -230,6 +273,38 @@
             if (rawValue >= 1e9) return (rawValue / 1e9).toFixed(2) + 'Billions';
             if (rawValue >= 1e6) return (rawValue / 1e6).toFixed(2) + 'Millions';
             return rawValue.toLocaleString();
+        }
+
+        // Dedicated renderer engine for the Top Kills leaderboard rows
+        function renderLeaderboard(killArray) {
+            const container = document.getElementById('kills-leaderboard-container');
+            if (!killArray || !killArray.length) return;
+
+            let htmlContent = '';
+
+            killArray.forEach((killEvent, index) => {
+                const position = index + 1;
+                const killerName = killEvent.Killer?.Name || "Unknown Killer";
+                const victimName = killEvent.Victim?.Name || "Unknown Victim";
+                const calculatedFame = formatCompactFame(killEvent.TotalKillFame);
+
+                // Distinct rank icons for the podium spots
+                let placementVisual = `<span class="text-gray-500 font-mono text-sm font-bold">${position}</span>`;
+                if (position === 1) placementVisual = `<i class="fas fa-crown text-amber-400 text-sm drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]"></i>`;
+                if (position === 2) placementVisual = `<i class="fas fa-medal text-slate-300 text-sm"></i>`;
+                if (position === 3) placementVisual = `<i class="fas fa-medal text-amber-700 text-sm"></i>`;
+
+                htmlContent += `
+                    <div class="grid grid-cols-12 items-center py-3.5 px-4 hover:bg-gray-900/30 transition-colors duration-150 group">
+                        <div class="col-span-2 text-center">${placementVisual}</div>
+                        <div class="col-span-4 font-semibold text-gray-200 group-hover:text-amber-400 transition-colors truncate pr-2">${killerName}</div>
+                        <div class="col-span-3 text-gray-400 italic truncate pr-2">${victimName}</div>
+                        <div class="col-span-3 text-right font-bold font-mono text-red-400">${calculatedFame}</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = htmlContent;
         }
 
         async function fetchGuildData() {
@@ -253,6 +328,17 @@
                 document.getElementById('alliance-name').innerText = allianceText;
                 document.getElementById('member-count').innerText = memberCount;
                 document.getElementById('kill-fame').innerText = killFame;
+
+                // Concurrent fetch call to capture telemetry leaderboard data
+                try {
+                    const leaderboardResponse = await fetch(topKillsJsonUrl);
+                    if (leaderboardResponse.ok) {
+                        const leaderboardData = await leaderboardResponse.json();
+                        renderLeaderboard(leaderboardData);
+                    }
+                } catch (lbError) {
+                    console.error("Leaderboard component runtime failure:", lbError);
+                }
                 
                 const loader = document.getElementById('loading');
                 const card = document.getElementById('guild-card');

@@ -1,0 +1,54 @@
+name: Fetch Weekly Top Outlands Kills
+
+on:
+  schedule:
+    # Runs automatically every 6 hours to keep the data fresh without hitting API limits
+    - cron: '*/5 * * * *' # Executes securely every 5 minutes to capture roster changes
+  workflow_dispatch:
+    # Allows you to manually trigger the fetch anytime from the GitHub Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-leaderboard:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository Codebase
+        uses: actions/checkout@v4
+
+      - name: Pull Weekly Top Outlands Data from Albion API
+        run: |
+          # Variable Definitions
+          API_URL="https://gameinfo.albiononline.com/api/gameinfo/guilds/AIbIw4erSVyHg9Ab6LVtdA/top?range=week&limit=10&offset=1&region=Outlands"
+          
+          echo "Initiating data acquisition from Albion API node..."
+          
+          # Perform curl request with a 30-second timeout and custom User-Agent to prevent bot-blocking
+          curl -s -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+               --max-time 30 \
+               "$API_URL" -o top-kills.json
+
+          # Quick validation block to verify that JSON was actually written and isn't blank
+          if [ -s top-kills.json ]; then
+            echo "Data payload mapped successfully."
+          else
+            echo "Warning: API returned an empty response or timed out."
+            exit 1
+          fi
+
+      - name: Securely Commit and Push Dataset back to GitHub Pages Branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Only proceed with the commit script if changes to the file are actually detected
+          git add top-kills.json
+          if git diff-index --quiet HEAD --; then
+            echo "No change in ranking telemetry metrics. Skipping push routine."
+          else
+            git commit -m "chore(data): automated update of weekly top outlands kills [skip ci]"
+            git push
+            echo "New dataset successfully pushed to repository storage logs."
+          fi
