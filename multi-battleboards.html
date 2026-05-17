@@ -28,6 +28,14 @@
             z-index: -1;
             filter: blur(40px);
         }
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        th.sortable:hover {
+            color: #fbbf24 !important;
+            background: rgba(255, 255, 255, 0.02);
+        }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col font-sans selection:bg-amber-500 selection:text-black pb-24">
@@ -138,12 +146,12 @@
             </div>
 
             <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl border border-gray-900/80">
-                <div class="p-5 bg-gray-900/30 border-b border-gray-800/60 flex items-center justify-between">
+                <div class="p-5 bg-gray-900/30 border-b border-gray-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h3 class="text-sm font-bold text-white tracking-wide">Consolidated Combatant Manifesto</h3>
-                        <p class="text-[11px] text-gray-500 mt-0.5">Aggregated metrics per player across all specified operational engagements.</p>
+                        <p class="text-[11px] text-gray-500 mt-0.5">Click headers to sort data. Type inside column header boxes to filter by group name.</p>
                     </div>
-                    <span id="player-count-badge" class="bg-gray-950 border border-gray-800 text-gray-400 text-[11px] px-2.5 py-1 rounded-md font-mono">
+                    <span id="player-count-badge" class="self-start sm:self-auto bg-gray-950 border border-gray-800 text-gray-400 text-[11px] px-2.5 py-1 rounded-md font-mono">
                         0 Unique Players Tracked
                     </span>
                 </div>
@@ -152,12 +160,37 @@
                     <table class="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                             <tr class="border-b border-gray-900 text-gray-400 text-xs font-bold uppercase tracking-wider bg-gray-900/20">
-                                <th class="p-4">Combatant Character Name</th>
-                                <th class="p-4">Guild Vector</th>
-                                <th class="p-4">Alliance</th>
-                                <th class="p-4 text-center text-emerald-400">Total Kills</th>
-                                <th class="p-4 text-center text-red-400">Total Deaths</th>
-                                <th class="p-4 text-right">Total Kill Fame</th>
+                                <th class="p-4 min-w-[160px]">Combatant Character Name</th>
+                                <th class="p-4 min-w-[180px]">
+                                    <div class="flex flex-col gap-1.5">
+                                        <span>Guild Vector</span>
+                                        <input type="text" id="filter-guild" placeholder="Filter Guild..." class="w-full bg-gray-950 border border-gray-800 rounded px-2 py-1 text-[11px] text-amber-400 font-normal focus:outline-none focus:border-amber-500/50 placeholder:text-gray-700">
+                                    </div>
+                                </th>
+                                <th class="p-4 min-w-[120px]">
+                                    <div class="flex flex-col gap-1.5">
+                                        <span>Alliance</span>
+                                        <input type="text" id="filter-alliance" placeholder="Filter Tag..." class="w-full bg-gray-950 border border-gray-800 rounded px-2 py-1 text-[11px] text-amber-400 font-normal focus:outline-none focus:border-amber-500/50 placeholder:text-gray-700">
+                                    </div>
+                                </th>
+                                <th class="p-4 text-center text-emerald-400 sortable transition-colors" onclick="toggleSort('kills')">
+                                    <div class="flex items-center justify-center gap-1.5 py-2">
+                                        <span>Total Kills</span>
+                                        <i id="sort-icon-kills" class="fas fa-sort text-[10px] text-gray-600"></i>
+                                    </div>
+                                </th>
+                                <th class="p-4 text-center text-red-400 sortable transition-colors" onclick="toggleSort('deaths')">
+                                    <div class="flex items-center justify-center gap-1.5 py-2">
+                                        <span>Total Deaths</span>
+                                        <i id="sort-icon-deaths" class="fas fa-sort text-[10px] text-gray-600"></i>
+                                    </div>
+                                </th>
+                                <th class="p-4 text-right text-amber-400 sortable transition-colors" onclick="toggleSort('fame')">
+                                    <div class="flex items-center justify-end gap-1.5 py-2">
+                                        <span>Total Kill Fame</span>
+                                        <i id="sort-icon-fame" class="fas fa-sort-down text-[11px] text-amber-500"></i>
+                                    </div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="player-rows" class="divide-y divide-gray-900/60 text-gray-300">
@@ -198,6 +231,11 @@
         const repoName = 'NFT'; 
         const localJsonUrl = `https://${githubUser}.github.io/${repoName}/battle-data.json?t=${Date.now()}`;
 
+        // Memory states to keep track of sorting and filtering options seamlessly
+        let globalPlayersArray = [];
+        let activeSortColumn = 'fame'; // Defaults to sorting by Kill Fame top-to-bottom
+        let isDescending = true;
+
         function formatCompactFame(num) {
             if (!num || isNaN(num)) return "0";
             const val = parseFloat(num);
@@ -207,7 +245,6 @@
             return val.toLocaleString();
         }
 
-        // Extracts multi ID array parameters query string strings
         function getQueryBattleIds() {
             const params = new URLSearchParams(window.location.search);
             const idsRaw = params.get('ids');
@@ -222,7 +259,6 @@
                 return;
             }
 
-            // Generate clean visualization filter badges for header container block
             const badgeContainer = document.getElementById('battle-ids-badges');
             targetIds.forEach(id => {
                 const badge = document.createElement('span');
@@ -236,7 +272,6 @@
                 if (!res.ok) throw new Error(`HTTP Matrix system data download breakdown status: ${res.status}`);
                 const battlesCacheArray = await res.json();
 
-                // Group up all requested battle items matching URL array values filter
                 const targetedBattles = battlesCacheArray.filter(b => targetIds.includes(String(b.id)));
                 
                 if (targetedBattles.length === 0) {
@@ -246,12 +281,10 @@
 
                 document.getElementById('combined-status-text').innerText = `Consolidating telemetry datasets across ${targetedBattles.length} confirmed log logs.`;
 
-                // Sub-Analytical Consolidated Dictionaries 
                 let allianceCombinedMap = {};
                 let guildCombinedMap = {};
                 let playerCombinedMap = {};
 
-                // Process and sum up information iteratively across all targeted matches 
                 targetedBattles.forEach(battle => {
                     const playersArray = battle.players ? Object.values(battle.players) : [];
 
@@ -260,7 +293,6 @@
                         const allianceTag = p.allianceName && p.allianceName.trim() !== "" ? p.allianceName.toUpperCase() : "NONE";
                         const guildName = p.guildName || "Unknown Guild";
 
-                        // Sum Alliances
                         if (!allianceCombinedMap[allianceTag]) {
                             allianceCombinedMap[allianceTag] = { name: allianceTag, kills: 0, deaths: 0, fame: 0 };
                         }
@@ -268,7 +300,6 @@
                         allianceCombinedMap[allianceTag].deaths += (p.deaths || 0);
                         allianceCombinedMap[allianceTag].fame += (p.killFame || 0);
 
-                        // Sum Guilds
                         if (!guildCombinedMap[guildName]) {
                             guildCombinedMap[guildName] = { name: guildName, alliance: allianceTag, kills: 0, deaths: 0, fame: 0 };
                         }
@@ -276,7 +307,6 @@
                         guildCombinedMap[guildName].deaths += (p.deaths || 0);
                         guildCombinedMap[guildName].fame += (p.killFame || 0);
 
-                        // Sum Individual Players across matches
                         if (!playerCombinedMap[characterName]) {
                             playerCombinedMap[characterName] = { name: characterName, guild: guildName, alliance: allianceTag, kills: 0, deaths: 0, fame: 0 };
                         }
@@ -286,10 +316,11 @@
                     });
                 });
 
-                const unifiedPlayersArray = Object.values(playerCombinedMap);
-                document.getElementById('player-count-badge').innerText = `${unifiedPlayersArray.length} Unique Combatants Consolidated`;
+                // Assign to global state array variable memory footprint for sorting functions
+                globalPlayersArray = Object.values(playerCombinedMap);
+                document.getElementById('player-count-badge').innerText = `${globalPlayersArray.length} Unique Combatants Consolidated`;
 
-                // Render Unified Alliance Breakdown Matrix View
+                // Render Top Alliance Rows
                 const allianceTbody = document.getElementById('alliance-rows');
                 Object.values(allianceCombinedMap).sort((a,b) => b.fame - a.fame).forEach(a => {
                     const row = document.createElement('tr');
@@ -303,7 +334,7 @@
                     allianceTbody.appendChild(row);
                 });
 
-                // Render Unified Guilds Breakdown Matrix View
+                // Render Top Guild Rows
                 const guildTbody = document.getElementById('guild-rows');
                 Object.values(guildCombinedMap).sort((a,b) => b.fame - a.fame).forEach(g => {
                     const row = document.createElement('tr');
@@ -318,27 +349,13 @@
                     guildTbody.appendChild(row);
                 });
 
-                // Render Unified Consolidated Player Manifest
-                const playerTbody = document.getElementById('player-rows');
-                unifiedPlayersArray.sort((a,b) => b.fame - a.fame).forEach(p => {
-                    const allianceTag = p.alliance === 'NONE' ? "-" : p.alliance;
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/40";
-                    row.innerHTML = `
-                        <td class="p-4 font-bold text-gray-100 flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-red-500 to-amber-500"></span>
-                            ${p.name}
-                        </td>
-                        <td class="p-4 text-gray-300 font-medium">${p.guild}</td>
-                        <td class="p-4 text-xs font-mono font-bold text-gray-500">${allianceTag}</td>
-                        <td class="p-4 text-center font-black text-emerald-400 font-mono text-sm">${p.kills}</td>
-                        <td class="p-4 text-center font-black text-red-400 font-mono text-sm">${p.deaths}</td>
-                        <td class="p-4 text-right font-black text-amber-400 font-mono">${formatCompactFame(p.fame)}</td>
-                    `;
-                    playerTbody.appendChild(row);
-                });
+                // Render main player database view with standard filters applied
+                renderPlayerTable();
 
-                // Reveal layout contents
+                // Hook user inputs into our real-time processing listeners
+                document.getElementById('filter-guild').addEventListener('input', renderPlayerTable);
+                document.getElementById('filter-alliance').addEventListener('input', renderPlayerTable);
+
                 document.getElementById('detail-loading').classList.add('hidden');
                 document.getElementById('detail-content').classList.remove('hidden');
 
@@ -348,6 +365,84 @@
             }
         }
 
+        // Handles the sorting logic updates and toggles font-awesome arrow directions
+        function toggleSort(columnKey) {
+            if (activeSortColumn === columnKey) {
+                isDescending = !isDescending; 
+            } else {
+                activeSortColumn = columnKey;
+                isDescending = true; 
+            }
+
+            // Clean icon classes back to default
+            ['kills', 'deaths', 'fame'].forEach(col => {
+                const icon = document.getElementById(`sort-icon-${col}`);
+                icon.className = "fas fa-sort text-[10px] text-gray-600";
+            });
+
+            // Set running state icon styles
+            const targetedIcon = document.getElementById(`sort-icon-${columnKey}`);
+            targetedIcon.className = isDescending ? "fas fa-sort-down text-[11px] text-amber-500" : "fas fa-sort-up text-[11px] text-amber-500";
+
+            renderPlayerTable();
+        }
+
+        // Handles rendering filtering logic calculations and outputs visual lists
+        function renderPlayerTable() {
+            const playerTbody = document.getElementById('player-rows');
+            playerTbody.innerHTML = ''; // Wipe out existing DOM list nodes
+
+            const guildFilterValue = document.getElementById('filter-guild').value.toLowerCase().trim();
+            const allianceFilterValue = document.getElementById('filter-alliance').value.toLowerCase().trim();
+
+            // Run sort calculations directly inside state data vectors array memory structures
+            let processedList = [...globalPlayersArray];
+
+            // 1. Process filters strings
+            if (guildFilterValue !== '') {
+                processedList = processedList.filter(p => p.guild.toLowerCase().includes(guildFilterValue));
+            }
+            if (allianceFilterValue !== '') {
+                processedList = processedList.filter(p => p.alliance.toLowerCase().includes(allianceFilterValue));
+            }
+
+            // 2. Compute Sort metrics alignments
+            processedList.sort((a, b) => {
+                let valA = a[activeSortColumn];
+                let valB = b[activeSortColumn];
+                return isDescending ? (valB - valA) : (valA - valB);
+            });
+
+            // 3. Write rows onto interface engine structure layout container block
+            if (processedList.length === 0) {
+                playerTbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-xs text-gray-600 italic tracking-wide">
+                            No matching combatant records match your specific column filtering inputs.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            processedList.forEach(p => {
+                const allianceTag = p.alliance === 'NONE' ? "-" : p.alliance;
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/40";
+                row.innerHTML = `
+                    <td class="p-4 font-bold text-gray-100 flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-red-500 to-amber-500"></span>
+                        ${p.name}
+                    </td>
+                    <td class="p-4 text-gray-300 font-medium">${p.guild}</td>
+                    <td class="p-4 text-xs font-mono font-bold text-gray-500">${allianceTag}</td>
+                    <td class="p-4 text-center font-black text-emerald-400 font-mono text-sm">${p.kills}</td>
+                    <td class="p-4 text-center font-black text-red-400 font-mono text-sm">${p.deaths}</td>
+                    <td class="p-4 text-right font-black text-amber-400 font-mono">${formatCompactFame(p.fame)}</td>
+                `;
+                playerTbody.appendChild(row);
+            });
+        }
+
         function renderErrorState(customErrorMessage) {
             document.getElementById('error-message-text').innerText = customErrorMessage;
             document.getElementById('detail-loading').classList.add('hidden');
@@ -355,7 +450,6 @@
             document.getElementById('error-panel').classList.remove('hidden');
         }
 
-        // Run multi-aggregation data cycle on load execution
         processMultiBattleAggregation();
     </script>
 </body>
