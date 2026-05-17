@@ -126,17 +126,14 @@
             </div>
         </div>
 
-        <div id="cors-fallback-panel" class="hidden max-w-2xl mx-auto glass-panel p-8 rounded-2xl border border-red-500/20 bg-red-950/5 space-y-4">
-            <div class="flex items-center space-x-3 text-red-400">
+        <div id="error-fallback-panel" class="hidden max-w-2xl mx-auto glass-panel p-8 rounded-2xl border border-red-500/20 bg-red-950/5 space-y-4 text-center">
+            <div class="flex items-center justify-center space-x-3 text-red-400">
                 <i class="fas fa-triangle-exclamation text-2xl"></i>
-                <h3 class="text-lg font-black tracking-wide">API Direct Access Restricted (CORS)</h3>
+                <h3 class="text-lg font-black tracking-wide">Chronicle Data Unreadable</h3>
             </div>
             <p class="text-xs text-gray-400 leading-relaxed">
-                Albion Online's API server restricts direct web client inquiries. To display live charts automatically, paste your API JSON content directly into a data script array, or have your <span class="text-amber-400">GitHub Actions architecture</span> fetch the API to a local JSON tracking file daily.
+                Could not retrieve secure data records from <span class="text-amber-400 font-mono">battle-data.json</span>. Verify that your GitHub Actions automated routine has run successfully and generated the target dataset file in your repository.
             </p>
-            <div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 font-mono text-xs text-gray-300 select-all overflow-x-auto">
-                https://gameinfo.albiononline.com/api/gameinfo/battles?range=week&offset=0&limit=9999&sort=totalfame&guildId=AIbIw4erSVyHg9Ab6LVtdA
-            </div>
         </div>
     </main>
 
@@ -174,8 +171,11 @@
 
     <script>
         const TARGET_GUILD_ID = "AIbIw4erSVyHg9Ab6LVtdA";
-        // Changed limit to 99999 as requested to load full data cache into client memory before paging
-        const fallbackApiUrl = `https://gameinfo.albiononline.com/api/gameinfo/battles?range=week&offset=0&limit=99999&sort=totalfame&guildId=${TARGET_GUILD_ID}`;
+        
+        // Relative configuration path matching the home page data strategy 
+        const githubUser = 'AlbionNFT';
+        const repoName = 'NFT'; 
+        const localJsonUrl = `https://${githubUser}.github.io/${repoName}/battle-data.json?t=${Date.now()}`;
 
         // Pagination State Parameters
         let allBattlesCache = [];
@@ -201,7 +201,6 @@
             } catch(e) { return "Recent Match"; }
         }
 
-        // Render function running calculations against slice pages
         function displayCurrentPage() {
             const tbody = document.getElementById('battle-rows');
             tbody.innerHTML = "";
@@ -287,7 +286,6 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // Selection Management Methods
         function toggleBattleSelection(checkbox, battleId) {
             if (checkbox.checked) {
                 selectedBattleIds.add(battleId);
@@ -310,17 +308,15 @@
             }
         }
 
-        // Transition utility passing selected IDs across to next workspace page
         function navigateToMultiBoards() {
             const idArray = Array.from(selectedBattleIds);
-            // Formulates standard URI string parameter variables array payload format
             const queryParam = idArray.join(',');
             window.location.href = `multi-battleboards.html?ids=${queryParam}`;
         }
 
         async function initFetchWorkflow() {
             try {
-                const res = await fetch(fallbackApiUrl);
+                const res = await fetch(localJsonUrl);
                 if (!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
                 allBattlesCache = await res.json();
                 
@@ -329,24 +325,9 @@
                 
                 displayCurrentPage();
             } catch (err) {
-                console.warn("Direct live api access blocked by system sandbox security policy wrapper:", err.message);
+                console.error("Workflow tracking payload acquisition mismatch:", err.message);
                 document.getElementById('log-loading').classList.add('hidden');
-                document.getElementById('cors-fallback-panel').classList.remove('hidden');
-                
-                // MOCK CACHE POPULATOR (For offline dashboard debugging/testing layouts)
-                /*
-                allBattlesCache = Array.from({length: 42}, (_, i) => ({
-                    "id": 1387470600 + i,
-                    "startTime": new Date(Date.now() - i * 3600000).toISOString(),
-                    "totalFame": 154477979,
-                    "players": {
-                        "p1": { "guildId": TARGET_GUILD_ID, "guildName": "NoFreeThinkers", "kills": 5, "deaths": 1, "killFame": 4500000 }
-                    }
-                }));
-                document.getElementById('cors-fallback-panel').classList.add('hidden');
-                document.getElementById('battleboards-container').classList.remove('hidden');
-                displayCurrentPage();
-                */
+                document.getElementById('error-fallback-panel').classList.remove('hidden');
             }
         }
 
