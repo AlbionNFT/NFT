@@ -27,36 +27,28 @@
     <div id="loading" class="text-xl font-semibold text-gray-400">Fetching Guild Data...</div>
 
     <script>
-        // The Albion Online Guild API URL
-        const apiUrl = 'https://gameinfo.albiononline.com/api/gameinfo/guilds/AIbIw4erSVyHg9Ab6LVtdA';
+// Fetch directly from your own repository file instead of the Albion API
+const localJsonUrl = './guild-data.json';
+
+async function fetchGuildData() {
+    try {
+        const response = await fetch(localJsonUrl);
+        const data = await response.json();
         
-        // We prefix the API URL with a public CORS proxy
-        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(apiUrl);
+        document.getElementById('guild-name').innerText = data.Name;
+        document.getElementById('alliance-name').innerText = data.AllianceName || '';
+        document.getElementById('member-count').innerText = data.MemberCount;
+        document.getElementById('kill-fame').innerText = data.KillFame.toLocaleString();
+        
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('guild-card').classList.remove('hidden');
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        document.getElementById('loading').innerText = 'Data file not generated yet. Wait for GitHub action to run.';
+    }
+}
 
-        async function fetchGuildData() {
-            try {
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('Network response was not ok');
-                
-                const data = await response.json();
-                
-                // Update the HTML elements with API data
-                document.getElementById('guild-name').innerText = data.Name;
-                document.getElementById('alliance-name').innerText = data.AllianceName ? `[${data.AllianceTag}] ${data.AllianceName}` : 'No Alliance';
-                document.getElementById('member-count').innerText = data.MemberCount;
-                document.getElementById('kill-fame').innerText = data.KillFame.toLocaleString();
-                
-                // Toggle visibility
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('guild-card').classList.remove('hidden');
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                document.getElementById('loading').innerText = 'Failed to load guild data. Proxy might be rate-limited.';
-                document.getElementById('loading').classList.add('text-red-500');
-            }
-        }
-
-        fetchGuildData();
+fetchGuildData();
     </script>
 </body>
 </html>
