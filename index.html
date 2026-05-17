@@ -27,20 +27,24 @@
     <div id="loading" class="text-xl font-semibold text-gray-400">Fetching Guild Data...</div>
 
 <script>
-    // Dynamically gets the correct path to your root folder to avoid 404s
-    const rootPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-    const localJsonUrl = `${window.location.origin}${rootPath}guild-data.json?t=${Date.now()}`;
+    // HARDCODED FIX: Replace 'AlbionNFT' with your GitHub username if different, and 'NFT' with your exact repo name
+    const githubUser = 'AlbionNFT';
+    const repoName = 'NFT'; 
+    
+    // This creates an absolute URL that works everywhere, bypassing relative path issues
+    const localJsonUrl = `https://${githubUser}.github.io/${repoName}/guild-data.json?t=${Date.now()}`;
 
     async function fetchGuildData() {
         try {
+            console.log("Fetching from absolute path:", localJsonUrl);
             const response = await fetch(localJsonUrl);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             
             const data = await response.json();
             
+            // Map values correctly matching Albion's API case-sensitivity
             const guildName = data.Name || "NoFreeThinkers";
             const memberCount = data.MemberCount || 0;
-            
             const killFame = data.killFame ? data.killFame.toLocaleString() : "0";
             
             let allianceText = "No Alliance";
