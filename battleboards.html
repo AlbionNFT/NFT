@@ -99,7 +99,7 @@
                         <thead>
                             <tr class="border-b border-gray-800 text-xs text-amber-500 font-bold uppercase tracking-wider bg-gray-900/20">
                                 <th class="p-4 w-12 text-center">Select</th>
-                                <th class="p-4">Battle ID & Date</th>
+                                <th class="p-4">Battle ID & Date (UTC)</th>
                                 <th class="p-4">Guild Name</th>
                                 <th class="p-4 text-center">Total Kills</th>
                                 <th class="p-4 text-center">Total Deaths</th>
@@ -108,7 +108,7 @@
                             </tr>
                         </thead>
                         <tbody id="battle-rows" class="divide-y divide-gray-900 text-sm">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
 
@@ -172,17 +172,14 @@
     <script>
         const TARGET_GUILD_ID = "AIbIw4erSVyHg9Ab6LVtdA";
         
-        // Relative configuration path matching the home page data strategy 
         const githubUser = 'AlbionNFT';
         const repoName = 'NFT'; 
         const localJsonUrl = `https://${githubUser}.github.io/${repoName}/battle-data.json?t=${Date.now()}`;
 
-        // Pagination State Parameters
         let allBattlesCache = [];
         let currentPage = 1;
         const rowsPerPage = 15;
 
-        // Selection State Cache Maps
         let selectedBattleIds = new Set();
 
         function formatCompactFame(num) {
@@ -194,10 +191,21 @@
             return val.toLocaleString();
         }
 
+        // Strict UTC Fixed Date Formatter
         function formatDateString(isoString) {
             try {
                 const d = new Date(isoString);
-                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+                
+                // Array lookup for static UTC short month text names
+                const months = ['Short', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const month = months[d.getUTCMonth() + 1];
+                const day = d.getUTCDate();
+                
+                // Formats 24-Hour time values with leading zeroes
+                const hours = String(d.getUTCHours()).padStart(2, '0');
+                const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+                
+                return `${month} ${day}, ${hours}:${minutes} UTC`;
             } catch(e) { return "Recent Match"; }
         }
 
@@ -242,7 +250,7 @@
                     </td>
                     <td class="p-4 font-medium text-gray-200">
                         <span class="block text-white font-bold">#${battle.id}</span>
-                        <span class="text-xs text-gray-500">${formatDateString(battle.startTime)}</span>
+                        <span class="text-xs text-gray-500 font-mono">${formatDateString(battle.startTime)}</span>
                     </td>
                     <td class="p-4 font-bold text-amber-400 tracking-wide">
                         ${targetGuildName}
@@ -257,8 +265,8 @@
                         ${formatCompactFame(computedFame)}
                     </td>
                     <td class="p-4 text-center">
-                        <a href="https://albionbattles.com/battles/${battle.id}" target="_blank" class="inline-flex items-center justify-center bg-gray-900 hover:bg-amber-500 border border-amber-500/20 text-xs font-bold text-amber-400 hover:text-black px-3 py-1.5 rounded-lg transition-all shadow-md">
-                            Check Battleboard <i class="fas fa-arrow-up-right-from-square ml-1.5 text-[10px]"></i>
+                        <a href="battleboard-detail.html?id=${battle.id}" class="inline-flex items-center justify-center bg-gray-900 hover:bg-amber-500 border border-amber-500/20 text-xs font-bold text-amber-400 hover:text-black px-3 py-1.5 rounded-lg transition-all shadow-md">
+                            Check Battleboard <i class="fas fa-chart-line ml-1.5 text-[10px]"></i>
                         </a>
                     </td>
                 `;
@@ -318,7 +326,16 @@
             try {
                 const res = await fetch(localJsonUrl);
                 if (!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
-                allBattlesCache = await res.json();
+                let parsedData = await res.json();
+                
+                // Explicit sorting mechanism: Organizes by newest battle down to oldest battle
+                if (Array.isArray(parsedData)) {
+                    parsedData.sort((a, b) => {
+                        return new Date(b.startTime || 0) - new Date(a.startTime || 0);
+                    });
+                }
+                
+                allBattlesCache = parsedData;
                 
                 document.getElementById('log-loading').classList.add('hidden');
                 document.getElementById('battleboards-container').classList.remove('hidden');
