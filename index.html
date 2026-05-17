@@ -260,13 +260,10 @@
     </footer>
 
     <script>
-// Configured with relative path architectures for instantaneous initial loading
-        const localJsonUrl = `./guild-data.json?t=${Date.now()}`;
-        const topKillsJsonUrl = `./top-kills.json?t=${Date.now()}`;
-        
-        // Target Albion Live Game Database Identification Variables
-        // IMPORTANT: Swap this out with your exact official Albion Guild ID hash string!
-        const ALBION_GUILD_ID = "AIbIw4erSVyHg9Ab6LVtdA"; 
+        const githubUser = 'AlbionNFT';
+        const repoName = 'NFT'; 
+        const localJsonUrl = `https://${githubUser}.github.io/${repoName}/guild-data.json?t=${Date.now()}`;
+        const topKillsJsonUrl = `https://${githubUser}.github.io/${repoName}/top-kills.json?t=${Date.now()}`;
 
         // Global card formatter function (keeps Trillions/Billions/Millions unchanged for macro cards)
         function formatCompactFame(num) {
@@ -290,11 +287,9 @@
         // Dedicated renderer engine for the Top Kills leaderboard rows
         function renderLeaderboard(killArray) {
             const container = document.getElementById('kills-leaderboard-container');
-            if (!killArray || !killArray.length) {
-                container.innerHTML = `<p class="text-center py-8 text-xs text-gray-500 tracking-wide italic">No high priority targets eliminated yet this week.</p>`;
-                return;
-            }
+            if (!killArray || !killArray.length) return;
 
+            // Enforce automatic client-side sorting tracking the highest single value total kill fame executions
             const sortedKills = [...killArray].sort((a, b) => {
                 const fameA = parseFloat(a.TotalKillFame || a.Killer?.KillFame || 0);
                 const fameB = parseFloat(b.TotalKillFame || b.Killer?.KillFame || 0);
@@ -302,25 +297,41 @@
             });
 
             let htmlContent = '';
+
             sortedKills.forEach((killEvent, index) => {
                 const position = index + 1;
+                
+                // 1. Unpacking Killer Core Information
                 const killer = killEvent.Killer || {};
                 const killerName = killer.Name || "Unknown Killer";
-                const itemPower = Math.round(killer.AverageItemPower || 0); 
-                const mainHandItem = killer.Equipment?.MainHand?.Type || "";
+                const rawIp = killer.AverageItemPower || 0;
+                const itemPower = Math.round(rawIp); // Clean up decimals (e.g., 1587)
                 
-                let weaponIconUrl = mainHandItem ? `https://render.albiononline.com/v1/item/${mainHandItem}.png?size=40` : "";
-                const victimName = killEvent.Victim?.Name || "Unknown Victim";
-                const calculatedFame = formatLeaderboardFame(killEvent.TotalKillFame || killer.KillFame || 0);   
+                // 2. Dynamic Weapon Rendering via Albion Asset Api Pipeline
+                const mainHandItem = killer.Equipment?.MainHand?.Type || "";
+                let weaponIconUrl = "";
+                if (mainHandItem) {
+                    weaponIconUrl = `https://render.albiononline.com/v1/item/${mainHandItem}.png?size=40`;
+                }
 
+                // 3. Unpacking Victim Information
+                const victimName = killEvent.Victim?.Name || "Unknown Victim";
+                
+                // Safely checks alternative data fields to format the numerical layout value cleanly
+                const targetRawFame =  killEvent.Victim.TotalVictimKillFame || 0;
+                const calculatedFame = formatLeaderboardFame(targetRawFame);   
+
+                // Distinct rank icons for the podium spots
                 let placementVisual = `<span class="text-gray-500 font-mono text-sm font-bold">${position}</span>`;
                 if (position === 1) placementVisual = `<i class="fas fa-crown text-amber-400 text-sm drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]"></i>`;
                 if (position === 2) placementVisual = `<i class="fas fa-medal text-slate-300 text-sm"></i>`;
                 if (position === 3) placementVisual = `<i class="fas fa-medal text-amber-700 text-sm"></i>`;
 
+                // Generate the visual markup row inserting weapon img and IP tags
                 htmlContent += `
                     <div class="grid grid-cols-12 items-center py-3.5 px-4 hover:bg-gray-900/30 transition-colors duration-150 group">
                         <div class="col-span-1 text-center">${placementVisual}</div>
+                        
                         <div class="col-span-5 flex items-center space-x-3 truncate pr-2">
                             ${weaponIconUrl ? `<img src="${weaponIconUrl}" alt="weapon" class="w-8 h-8 rounded bg-gray-900 border border-gray-800 object-contain flex-shrink-0" onerror="this.style.display='none'">` : `<div class="w-8 h-8 bg-gray-900 border border-gray-800 rounded flex-shrink-0"></div>`}
                             <div class="truncate">
@@ -328,11 +339,13 @@
                                 <p class="text-[10px] text-gray-500 font-mono">${itemPower > 0 ? `⚡ ${itemPower} IP` : 'No IP Data'}</p>
                             </div>
                         </div>
+                        
                         <div class="col-span-3 text-gray-400 italic truncate pr-2">${victimName}</div>
                         <div class="col-span-3 text-right font-bold font-mono text-red-400">${calculatedFame}</div>
                     </div>
                 `;
             });
+
             container.innerHTML = htmlContent;
         }
 
@@ -341,144 +354,145 @@
             const displayContainer = document.getElementById('cta-banner-content');
             if (!displayContainer) return;
 
+            // Capture true universal clock parameters instantly
             const currentRealTime = new Date();
             const totalUtcMinutesToday = (currentRealTime.getUTCHours() * 60) + currentRealTime.getUTCMinutes();
             const rawSeconds = currentRealTime.getUTCSeconds();
+
+            // Defined targets mapped cleanly into minutes from day boundary (00:00, 02:00, 04:00 UTC)
             const scheduleTargets = [0, 120, 240]; 
-            const durationWindow = 30; 
+            const durationWindow = 30; // 30 Minute active combat status constraint
 
             let activeCTAIndex = -1;
             let targetCTAMinutes = -1;
             let isInsideWindow = false;
 
+            // Step 1: Detect if a scheduled battle strike window is currently in progress
             for (let i = 0; i < scheduleTargets.length; i++) {
                 const startTime = scheduleTargets[i];
                 if (totalUtcMinutesToday >= startTime && totalUtcMinutesToday < (startTime + durationWindow)) {
                     isInsideWindow = true;
                     activeCTAIndex = startTime / 60;
-                    targetCTAMinutes = startTime + durationWindow; 
+                    targetCTAMinutes = startTime + durationWindow; // Track remaining active window minutes
                     break;
                 }
             }
 
+            // Step 2: If none are active, find the closest upcoming target sequence
             if (!isInsideWindow) {
+                // Find next timer setting in the current day
                 const upcomingMatch = scheduleTargets.find(time => time > totalUtcMinutesToday);
-                targetCTAMinutes = upcomingMatch !== undefined ? upcomingMatch : 24 * 60;
+                
+                if (upcomingMatch !== undefined) {
+                    targetCTAMinutes = upcomingMatch;
+                } else {
+                    // Loop around into 00:00 UTC target lines belonging to the following day sequence
+                    targetCTAMinutes = 24 * 60; // 1440 mins
+                }
             }
 
-            let totalDeltaSeconds = ((targetCTAMinutes - totalUtcMinutesToday) * 60) - rawSeconds;
+            // Step 3: Compute remaining hour/minute/second segments cleanly
+            let totalDeltaMinutes = targetCTAMinutes - totalUtcMinutesToday;
+            let totalDeltaSeconds = (totalDeltaMinutes * 60) - rawSeconds;
+
+            // Handle clean borrow variables safely
             if (totalDeltaSeconds < 0) totalDeltaSeconds = 0;
 
             const printHours = Math.floor(totalDeltaSeconds / 3600);
             const printMinutes = Math.floor((totalDeltaSeconds % 3600) / 60);
             const printSeconds = totalDeltaSeconds % 60;
+
+            // Zero-padding utility formatting definitions
             const padTimeValue = (val) => String(val).padStart(2, '0');
 
+            // Render visual tracking templates
             if (isInsideWindow) {
                 displayContainer.innerHTML = `
                     <div class="flex items-center space-x-2 text-red-400 font-extrabold uppercase text-xs tracking-wider animate-pulse">
-                        <span class="flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>
+                        <span class="flex h-2 w-2 relative">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
                         <span>MANDATORY CTA IN PROGRESS: ${padTimeValue(activeCTAIndex)} UTC</span>
                     </div>
-                    <div class="text-gray-400 font-mono text-xs font-semibold">Ending In: <span class="text-white font-bold">${padTimeValue(printMinutes)}m:${padTimeValue(printSeconds)}s</span></div>
+                    <div class="text-gray-400 font-mono text-xs font-semibold">
+                        Ending In: <span class="text-white font-bold">${padTimeValue(printMinutes)}m:${padTimeValue(printSeconds)}s</span>
+                    </div>
                 `;
             } else {
-                let targetDisplayLabel = targetCTAMinutes === 120 ? "02" : targetCTAMinutes === 240 ? "04" : "00";
+                // Deduce target layout string naming parameters cleanly
+                let targetDisplayLabel = "00";
+                if (targetCTAMinutes === 120) targetDisplayLabel = "02";
+                if (targetCTAMinutes === 240) targetDisplayLabel = "04";
+
                 displayContainer.innerHTML = `
-                    <div class="text-amber-400 font-bold uppercase text-xs tracking-wider flex items-center gap-1.5"><i class="fas fa-clock text-[11px]"></i> Next CTA: <span class="text-white underline decoration-amber-500/40">${targetDisplayLabel} UTC</span></div>
-                    <div class="text-gray-300 font-mono text-xs font-bold tracking-wide">${padTimeValue(printHours)}h:${padTimeValue(printMinutes)}m:${padTimeValue(printSeconds)}s</div>
+                    <div class="text-amber-400 font-bold uppercase text-xs tracking-wider flex items-center gap-1.5">
+                        <i class="fas fa-clock text-[11px]"></i> Next CTA: <span class="text-white underline decoration-amber-500/40">${targetDisplayLabel} UTC</span>
+                    </div>
+                    <div class="text-gray-300 font-mono text-xs font-bold tracking-wide">
+                        ${padTimeValue(printHours)}h:${padTimeValue(printMinutes)}m:${padTimeValue(printSeconds)}s
+                    </div>
                 `;
             }
         }
 
+        // Run the dynamic calculations engine loop every 1000 milliseconds safely
         setInterval(updateCTACooldownEngine, 1000);
-        updateCTACooldownEngine(); 
+        updateCTACooldownEngine(); // Fire calculation parameters instantly on load execution
 
-        // HYBRID LIVE PIPELINE: Instant Load via local repository + silent live update override
         async function fetchGuildData() {
-            let localDataLoaded = false;
-            
-            // STEP 1: Load the local workflow JSON immediately (Takes ~100ms)
             try {
-                const fallbackResponse = await fetch(localJsonUrl);
-                if (fallbackResponse.ok) {
-                    const fallbackData = await fallbackResponse.json();
-                    
-                    document.getElementById('guild-name').innerText = fallbackData.Name || "NoFreeThinkers";
-                    document.getElementById('member-count').innerText = fallbackData.MemberCount || 0;
-                    document.getElementById('kill-fame').innerText = formatCompactFame(fallbackData.killFame || 0);
-                    if (fallbackData.AllianceTag) {
-                        document.getElementById('alliance-name').innerText = fallbackData.AllianceName ? `[${fallbackData.AllianceTag}] ${fallbackData.AllianceName}` : `Alliance Tag: [${fallbackData.AllianceTag}]`;
-                    }
-                    
-                    // Instantly hide loader and show the dashboard data
-                    document.getElementById('loading').classList.add('hidden');
-                    const card = document.getElementById('guild-card');
-                    card.classList.remove('hidden');
-                    card.classList.remove('opacity-0', 'translate-y-4');
-                    localDataLoaded = true;
-                    console.log("Instant snapshot loaded from repository cache.");
-                }
-            } catch(e) {
-                console.warn("Local snapshot read failure. Waiting for live engine fallback...", e);
-            }
-
-            // STEP 2: Silently fetch live data from Albion servers via high-speed edge proxy
-            try {
-                console.log("Silently syncing live data channels via CorsProxy.io...");
-                
-                const targetApiGuildUrl = `https://gameinfo.albiononline.com/api/gameinfo/guilds/${ALBION_GUILD_ID}`;
-                const targetApiKillsUrl = `https://gameinfo.albiononline.com/api/gameinfo/guilds/${ALBION_GUILD_ID}/top?range=week`;
-                
-                // Swapped to high-speed corsproxy.io wrapper pipeline
-                const proxyGuildEndpoint = `https://corsproxy.io/?${encodeURIComponent(targetApiGuildUrl)}`;
-                const proxyKillsEndpoint = `https://corsproxy.io/?${encodeURIComponent(targetApiKillsUrl)}`;
-
-                const response = await fetch(proxyGuildEndpoint);
-                if (!response.ok) throw new Error(`Live Cluster Error: ${response.status}`);
+                console.log("Requesting archives:", localJsonUrl);
+                const response = await fetch(localJsonUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const data = await response.json();
                 
-                // Seamlessly swap the text metrics with the live real-time API values
-                document.getElementById('guild-name').innerText = data.Name || "NoFreeThinkers";
-                document.getElementById('member-count').innerText = data.MemberCount || 0;
-                document.getElementById('kill-fame').innerText = formatCompactFame(data.killFame || 0);
+                const guildName = data.Name || "NoFreeThinkers";
+                const memberCount = data.MemberCount || 0;
+                const killFame = data.killFame ? formatCompactFame(data.killFame) : "0";
+                
+                let allianceText = "Independent / No Alliance";
                 if (data.AllianceTag) {
-                    document.getElementById('alliance-name').innerText = data.AllianceName ? `[${data.AllianceTag}] ${data.AllianceName}` : `Alliance Tag: [${data.AllianceTag}]`;
+                    allianceText = data.AllianceName ? `[${data.AllianceTag}] ${data.AllianceName}` : `Alliance Tag: [${data.AllianceTag}]`;
                 }
 
-                // Make sure the main layout is unhidden if the local load failed entirely
-                if (!localDataLoaded) {
-                    document.getElementById('loading').classList.add('hidden');
-                    const card = document.getElementById('guild-card');
-                    card.classList.remove('hidden');
-                    setTimeout(() => card.classList.remove('opacity-0', 'translate-y-4'), 50);
-                }
-                console.log("Live dashboard sync finalized successfully.");
+                document.getElementById('guild-name').innerText = guildName;
+                document.getElementById('alliance-name').innerText = allianceText;
+                document.getElementById('member-count').innerText = memberCount;
+                document.getElementById('kill-fame').innerText = killFame;
 
-                // Concurrently fetch the live leaderboards
+                // Concurrent fetch call to capture telemetry leaderboard data
                 try {
-                    const leaderboardResponse = await fetch(proxyKillsEndpoint);
+                    const leaderboardResponse = await fetch(topKillsJsonUrl);
                     if (leaderboardResponse.ok) {
                         const leaderboardData = await leaderboardResponse.json();
                         renderLeaderboard(leaderboardData);
                     }
                 } catch (lbError) {
-                    console.error("Live Leaderboard sync failure:", lbError);
+                    console.error("Leaderboard component runtime failure:", lbError);
                 }
                 
+                const loader = document.getElementById('loading');
+                const card = document.getElementById('guild-card');
+                
+                loader.classList.add('hidden');
+                card.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    card.classList.remove('opacity-0', 'translate-y-4');
+                }, 50);
+                
             } catch (error) {
-                console.error('Live sync stalled:', error);
-                // If everything failed and no local data was available, show an error state
-                if (!localDataLoaded) {
-                    document.getElementById('loading').innerHTML = `
-                        <div class="text-center p-6 glass-panel border-red-500/30 rounded-2xl max-w-sm">
-                            <i class="fas fa-triangle-exclamation text-3xl text-red-500 mb-2"></i>
-                            <p class="text-sm font-semibold text-red-400">Connection Failed</p>
-                            <p class="text-xs text-gray-500 mt-1">Albion Online API systems are currently unresponsive. Please check back shortly.</p>
-                        </div>
-                    `;
-                }
+                console.error('Data acquisition failure:', error);
+                const loaderText = document.getElementById('loading');
+                loaderText.innerHTML = `
+                    <div class="text-center p-6 glass-panel border-red-500/30 rounded-2xl max-w-sm">
+                        <i class="fas fa-triangle-exclamation text-3xl text-red-500 mb-2"></i>
+                        <p class="text-sm font-semibold text-red-400">Chronicle Data Unreadable</p>
+                        <p class="text-xs text-gray-500 mt-1">${error.message}. Confirm workflow file has completed generation successfully.</p>
+                    </div>
+                `;
             }
         }
 
