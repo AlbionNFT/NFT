@@ -26,30 +26,46 @@
 
     <div id="loading" class="text-xl font-semibold text-gray-400">Fetching Guild Data...</div>
 
-    <script>
-// Fetch directly from your own repository file instead of the Albion API       
-// This forces the browser to look for a fresh file every single time
-const localJsonUrl = `./guild-data.json?t=${Date.now()}`;
+<script>
+    // Dynamically gets the correct path to your root folder to avoid 404s
+    const rootPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+    const localJsonUrl = `${window.location.origin}${rootPath}guild-data.json?t=${Date.now()}`;
 
-async function fetchGuildData() {
-    try {
-        const response = await fetch(localJsonUrl);
-        const data = await response.json();
-        
-        document.getElementById('guild-name').innerText = data.Name;
-        document.getElementById('alliance-name').innerText = data.AllianceName || '';
-        document.getElementById('member-count').innerText = data.MemberCount;
-        document.getElementById('kill-fame').innerText = data.KillFame.toLocaleString();
-        
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('guild-card').classList.remove('hidden');
-    } catch (error) {
-        console.error('Error fetching data:', error);
-        document.getElementById('loading').innerText = 'Data file not generated yet. Wait for GitHub action to run.';
+    async function fetchGuildData() {
+        try {
+            const response = await fetch(localJsonUrl);
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            
+            const data = await response.json();
+            
+            const guildName = data.Name || "NoFreeThinkers";
+            const memberCount = data.MemberCount || 0;
+            
+            const killFame = data.killFame ? data.killFame.toLocaleString() : "0";
+            
+            let allianceText = "No Alliance";
+            if (data.AllianceTag) {
+                allianceText = data.AllianceName ? `[${data.AllianceTag}] ${data.AllianceName}` : `[${data.AllianceTag}]`;
+            }
+
+            // Push values safely to the HTML elements
+            document.getElementById('guild-name').innerText = guildName;
+            document.getElementById('alliance-name').innerText = allianceText;
+            document.getElementById('member-count').innerText = memberCount;
+            document.getElementById('kill-fame').innerText = killFame;
+            
+            // Show the card, hide loading text
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('guild-card').classList.remove('hidden');
+            
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            document.getElementById('loading').innerText = `Failed to read file. Error: ${error.message}`;
+            document.getElementById('loading').classList.add('text-red-500');
+        }
     }
-}
 
-fetchGuildData();
-    </script>
+    fetchGuildData();
+</script>
 </body>
 </html>
