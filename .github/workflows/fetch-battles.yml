@@ -21,7 +21,7 @@ jobs:
         run: |
           echo "Initiating retrieval sequence from Albion Online API..."
           curl -s -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
-          "https://gameinfo.albiononline.com/api/gameinfo/battles?range=week&offset=0&limit=9999&sort=totalfame&guildId=AIbIw4erSVyHg9Ab6LVtdA" \
+          "https://gameinfo.albiononline.com/api/gameinfo/battles?range=week&offset=0&limit=40&sort=totalfame&guildId=AIbIw4erSVyHg9Ab6LVtdA" \
           -o battle-data.json
           
           # Basic validation check to verify if the output is valid JSON
