@@ -38,6 +38,12 @@
             -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
+        .glass-banner {
+            background: rgba(217, 119, 6, 0.08);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(251, 191, 36, 0.15);
+        }
         /* Animated ambient background spots */
         .bg-glow {
             position: fixed;
@@ -55,35 +61,43 @@
     <div class="bg-glow top-[-10%] left-[-10%] animate-pulse"></div>
     <div class="bg-glow bottom-[-10%] right-[-10%] animate-pulse" style="animation-duration: 8s;"></div>
 
-    <header class="glass-nav fixed top-0 left-0 w-full z-50 transition-all duration-300">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-gray-950 font-black shadow-lg shadow-amber-500/20">
-                    NFT
+    <div class="fixed top-0 left-0 w-full z-50 flex flex-col">
+        <header class="glass-nav w-full">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-gray-950 font-black shadow-lg shadow-amber-500/20">
+                        NFT
+                    </div>
+                    <span class="text-xl font-bold tracking-wider text-amber-400 uppercase">NoFreeThinkers</span>
                 </div>
-                <span class="text-xl font-bold tracking-wider text-amber-400 uppercase">NoFreeThinkers</span>
+                
+                <nav class="hidden md:flex space-x-6 lg:space-x-8 text-sm font-medium tracking-wide">   
+                    <a href="#" class="text-amber-400 border-b-2 border-amber-400 pb-1">Home</a>
+                    <a href="#stats" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Guild Stats</a>
+                    <a href="members.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Members</a>
+                    <a href="build.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Builds</a>
+                    <a href="battleboards.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Battle Boards</a>
+                    <a href="#community" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Community</a>
+                </nav>
+
+                <div class="flex items-center">
+                    <a href="https://discord.gg/yEegm7mdRT" target="_blank" class="relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-xs font-bold text-gray-900 rounded-lg group bg-gradient-to-br from-amber-500 to-orange-600 group-hover:from-amber-500 group-hover:to-orange-600 hover:text-white text-white focus:ring-4 focus:outline-none focus:ring-amber-800 mt-2">
+                        <span class="relative px-4 py-2 transition-all ease-in duration-75 bg-gray-950 rounded-md group-hover:bg-opacity-0">
+                            <i class="fab fa-discord mr-1 text-amber-400 group-hover:text-white"></i> JOIN DISCORD
+                        </span>
+                    </a>
+                </div>  
             </div>
-            
-            <nav class="hidden md:flex space-x-6 lg:space-x-8 text-sm font-medium tracking-wide">   
-                <a href="#" class="text-amber-400 border-b-2 border-amber-400 pb-1">Home</a>
-                <a href="#stats" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Guild Stats</a>
-                <a href="members.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Members</a>
-                <a href="build.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Builds</a>
-                <a href="battleboards.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Battle Boards</a>
-                <a href="#community" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Community</a>
-            </nav>
+        </header>
 
-            <div class="flex items-center">
-                <a href="https://discord.gg/yEegm7mdRT" target="_blank" class="relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-xs font-bold text-gray-900 rounded-lg group bg-gradient-to-br from-amber-500 to-orange-600 group-hover:from-amber-500 group-hover:to-orange-600 hover:text-white text-white focus:ring-4 focus:outline-none focus:ring-amber-800 mt-2">
-                    <span class="relative px-4 py-2 transition-all ease-in duration-75 bg-gray-950 rounded-md group-hover:bg-opacity-0">
-                        <i class="fab fa-discord mr-1 text-amber-400 group-hover:text-white"></i> JOIN DISCORD
-                    </span>
-                </a>
-            </div>  
+        <div class="glass-banner w-full py-2 px-4 shadow-md flex items-center justify-center">
+            <div id="cta-banner-content" class="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-4 text-center">
+                <div class="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
         </div>
-    </header>
+    </div>
 
-    <main class="flex-grow pt-24 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col items-center justify-center">
+    <main class="flex-grow pt-36 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col items-center justify-center">
         
         <div id="loading" class="flex flex-col items-center justify-center space-y-4 py-12 transition-all duration-300">
             <div class="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
@@ -334,6 +348,97 @@
 
             container.innerHTML = htmlContent;
         }
+
+        // Fully Automated Albion Call To Arms Live Tracker Module
+        function updateCTACooldownEngine() {
+            const displayContainer = document.getElementById('cta-banner-content');
+            if (!displayContainer) return;
+
+            // Capture true universal clock parameters instantly
+            const currentRealTime = new Date();
+            const totalUtcMinutesToday = (currentRealTime.getUTCHours() * 60) + currentRealTime.getUTCMinutes();
+            const rawSeconds = currentRealTime.getUTCSeconds();
+
+            // Defined targets mapped cleanly into minutes from day boundary (00:00, 02:00, 04:00 UTC)
+            const scheduleTargets = [0, 120, 240]; 
+            const durationWindow = 30; // 30 Minute active combat status constraint
+
+            let activeCTAIndex = -1;
+            let targetCTAMinutes = -1;
+            let isInsideWindow = false;
+
+            // Step 1: Detect if a scheduled battle strike window is currently in progress
+            for (let i = 0; i < scheduleTargets.length; i++) {
+                const startTime = scheduleTargets[i];
+                if (totalUtcMinutesToday >= startTime && totalUtcMinutesToday < (startTime + durationWindow)) {
+                    isInsideWindow = true;
+                    activeCTAIndex = startTime / 60;
+                    targetCTAMinutes = startTime + durationWindow; // Track remaining active window minutes
+                    break;
+                }
+            }
+
+            // Step 2: If none are active, find the closest upcoming target sequence
+            if (!isInsideWindow) {
+                // Find next timer setting in the current day
+                const upcomingMatch = scheduleTargets.find(time => time > totalUtcMinutesToday);
+                
+                if (upcomingMatch !== undefined) {
+                    targetCTAMinutes = upcomingMatch;
+                } else {
+                    // Loop around into 00:00 UTC target lines belonging to the following day sequence
+                    targetCTAMinutes = 24 * 60; // 1440 mins
+                }
+            }
+
+            // Step 3: Compute remaining hour/minute/second segments cleanly
+            let totalDeltaMinutes = targetCTAMinutes - totalUtcMinutesToday;
+            let totalDeltaSeconds = (totalDeltaMinutes * 60) - rawSeconds;
+
+            // Handle clean borrow variables safely
+            if (totalDeltaSeconds < 0) totalDeltaSeconds = 0;
+
+            const printHours = Math.floor(totalDeltaSeconds / 3600);
+            const printMinutes = Math.floor((totalDeltaSeconds % 3600) / 60);
+            const printSeconds = totalDeltaSeconds % 60;
+
+            // Zero-padding utility formatting definitions
+            const padTimeValue = (val) => String(val).padStart(2, '0');
+
+            // Render visual tracking templates
+            if (isInsideWindow) {
+                displayContainer.innerHTML = `
+                    <div class="flex items-center space-x-2 text-red-400 font-extrabold uppercase text-xs tracking-wider animate-pulse">
+                        <span class="flex h-2 w-2 relative">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                        <span>MANDATORY CTA IN PROGRESS: ${padTimeValue(activeCTAIndex)} UTC</span>
+                    </div>
+                    <div class="text-gray-400 font-mono text-xs font-semibold">
+                        Ending In: <span class="text-white font-bold">${padTimeValue(printMinutes)}m:${padTimeValue(printSeconds)}s</span>
+                    </div>
+                `;
+            } else {
+                // Deduce target layout string naming parameters cleanly
+                let targetDisplayLabel = "00";
+                if (targetCTAMinutes === 120) targetDisplayLabel = "02";
+                if (targetCTAMinutes === 240) targetDisplayLabel = "04";
+
+                displayContainer.innerHTML = `
+                    <div class="text-amber-400 font-bold uppercase text-xs tracking-wider flex items-center gap-1.5">
+                        <i class="fas fa-clock text-[11px]"></i> Next CTA: <span class="text-white underline decoration-amber-500/40">${targetDisplayLabel} UTC</span>
+                    </div>
+                    <div class="text-gray-300 font-mono text-xs font-bold tracking-wide">
+                        ${padTimeValue(printHours)}h:${padTimeValue(printMinutes)}m:${padTimeValue(printSeconds)}s
+                    </div>
+                `;
+            }
+        }
+
+        // Run the dynamic calculations engine loop every 1000 milliseconds safely
+        setInterval(updateCTACooldownEngine, 1000);
+        updateCTACooldownEngine(); // Fire calculation parameters instantly on load execution
 
         async function fetchGuildData() {
             try {
