@@ -248,7 +248,7 @@
                     <td class="py-3.5 px-4 text-right text-red-400 font-mono text-xs">${killFame.toLocaleString()}</td>
                     <td class="py-3.5 px-4 text-right ${ratio >= 1.0 ? 'text-emerald-400' : 'text-amber-500/70'} font-mono text-xs">${ratio}</td>
                     <td class="py-3.5 px-6 text-center">
-                        <a href="https://albiondb.net/search/${player.Name }" target="_blank" class="inline-flex items-center space-x-1 text-[11px] bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-black font-bold px-2 py-1 rounded border border-amber-500/20 hover:border-transparent transition-all tracking-wider uppercase">
+                        <a href="https://albiondb.net/player/${player.Name }" target="_blank" class="inline-flex items-center space-x-1 text-[11px] bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-black font-bold px-2 py-1 rounded border border-amber-500/20 hover:border-transparent transition-all tracking-wider uppercase">
                             <span>Profile</span> <i class="fas fa-arrow-up-right-from-square text-[9px]"></i>
                         </a>
                     </td>
@@ -265,7 +265,7 @@
             renderRosterGrid(matchingSubset);
         }
 
-        // Initialize operational load routines
+        // Initialize operational load routines 
         fetchRosterData();
     </script>
 </body>
