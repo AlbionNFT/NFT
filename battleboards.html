@@ -3,7 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Battle Boards | NoFreeThinkers</title>
+    <title>Multi-Battle Analytics | NoFreeThinkers</title>
+    
+    <meta property="og:title" content="No Free Thinkers | Multiple Battleboard" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="Aggregated Battle Report - Live Alliance & Combat Performance Tallies." />
+    <meta name="theme-color" content="#fbbf24" />
+
+    <script>
+        (function() {
+            // 1. Grab whatever IDs are currently in the address bar (handles single or multiple)
+            const currentUrl = window.location.href;
+            const params = new URLSearchParams(window.location.search);
+            const ids = params.get('ids');
+
+            if (ids) {
+                // 2. Create the Open Graph Image tag dynamically
+                const ogImage = document.createElement('meta');
+                ogImage.setAttribute('property', 'og:image');
+
+                // 3. Pass the full page URL to a free automated rendering engine.
+                // The 'selector=#alliance-summary-card' instructs it to ignore the rest of the site and capture ONLY your table.
+                // 'delay=2500' gives your Javascript file plenty of time to fetch data and compile the table first!
+                const encodedUrl = encodeURIComponent(currentUrl);
+                const captureService = `https://render-tron.appspot.com/screenshot/${encodedUrl}?selector=%23alliance-summary-card&delay=2500`;
+                
+                ogImage.setAttribute('content', captureService);
+                document.head.appendChild(ogImage);
+                
+                // Set explicit dimensions so Discord allocates the space nicely
+                const ogImageWidth = document.createElement('meta');
+                ogImageWidth.setAttribute('property', 'og:image:width');
+                ogImageWidth.setAttribute('content', '650');
+                document.head.appendChild(ogImageWidth);
+            }
+        })();
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
