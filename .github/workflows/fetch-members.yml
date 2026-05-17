@@ -1,9 +1,7 @@
 name: Update Guild Member Chronicle
 
 on:
-  schedule:
-    - cron: '*/5 * * * *' # Executes securely every 5 minutes to capture roster changes
-  workflow_dispatch:      # Grants you a physical manual override button on GitHub
+  workflow_dispatch:      # Handled exclusively by the Master Orchestrator or manual overrides
 
 # Force the runner to execute all JavaScript actions using Node.js 24
 env:
@@ -22,7 +20,10 @@ jobs:
 
     - name: Query Royal Archives for Roster Data
       run: |
-        curl -s "https://gameinfo.albiononline.com/api/gameinfo/guilds/AIbIw4erSVyHg9Ab6LVtdA/members" > members-data.json
+        echo "Querying roster demographics..."
+        curl -s -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+             --max-time 30 \
+             "https://gameinfo.albiononline.com/api/gameinfo/guilds/AIbIw4erSVyHg9Ab6LVtdA/members" > members-data.json
 
     - name: Validate Integrity of Acquired Record
       run: |
@@ -35,6 +36,7 @@ jobs:
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        
         git add members-data.json
         # Only commit if actual data delta changes occur
         git diff-index --quiet HEAD || git commit -m "chore: dynamically sync outbound alliance roster telemetry [automated]"

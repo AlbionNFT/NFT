@@ -1,9 +1,7 @@
 name: Fetch Albion Guild Data
 
 on:
-  schedule:
-    - cron: '*/5 * * * *' # Corrected: Runs every 5 minutes, every day
-  workflow_dispatch: # Allows you to click a button to update manually
+  workflow_dispatch: # Allows the Master Orchestrator or a manual button click to run this file
 
 # Force the runner to execute all JavaScript actions using Node.js 24
 env:
@@ -21,11 +19,22 @@ jobs:
 
       - name: Fetch Albion API Data
         run: |
-          curl -s "https://gameinfo.albiononline.com/api/gameinfo/guilds/AIbIw4erSVyHg9Ab6LVtdA" > guild-data.json
+          echo "Initiating guild data acquisition..."
+          curl -s -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+               --max-time 30 \
+               "https://gameinfo.albiononline.com/api/gameinfo/guilds/AIbIw4erSVyHg9Ab6LVtdA" > guild-data.json
+
+          if [ -s guild-data.json ]; then
+            echo "Guild data saved successfully."
+          else
+            echo "Error: Empty response received from Albion API."
+            exit 1
+          fi
 
       - name: Commit and Push if changed
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
           git add guild-data.json
           git diff --quiet && git diff --staged --quiet || (git commit -m "Automated Albion data update" && git push)

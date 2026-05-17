@@ -1,11 +1,7 @@
 name: Fetch Weekly Top Outlands Kills
 
 on:
-  schedule:
-    # Runs automatically every 6 hours to keep the data fresh without hitting API limits
-    - cron: '*/5 * * * *' # Executes securely every 5 minutes to capture roster changes
-  workflow_dispatch:    
-    # Allows you to manually trigger the fetch anytime from the GitHub Actions tab
+  workflow_dispatch: # Handled exclusively by the Master Orchestrator or manual overrides
 
 permissions:
   contents: write

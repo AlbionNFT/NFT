@@ -1,0 +1,50 @@
+name: Master Albion Orchestrator
+
+on:
+  workflow_dispatch: # Triggered by Cron-Job.org
+
+permissions:
+  actions: write # Needed to give the script permission to trigger other workflows
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Guild Core Stats Workflow
+        run: |
+          echo "Kicking off Core Guild Stats Sync..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/fetch-guild.yml/dispatches \
+            -d '{"ref":"${{ github.ref_name }}"}'
+
+      - name: Wait for Core Data to write (Albion Buffer)
+        run: sleep 30 # Gives the guild file 30 seconds to run and save its JSON
+
+      - name: Trigger Top Kills Leaderboard Workflow
+        run: |
+          echo "Kicking off Top Kills Sync..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/fetch-top.yml/dispatches \
+            -d '{"ref":"${{ github.ref_name }}"}'
+
+      - name: Trigger Member Roster Workflow
+        run: |
+          echo "Kicking off Members List Sync..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/fetch-members.yml/dispatches \
+            -d '{"ref":"${{ github.ref_name }}"}'
+
+      - name: Trigger Battles & Killboard Workflow
+        run: |
+          echo "Kicking off Battleboards Sync..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/fetch-battles.yml/dispatches \
+            -d '{"ref":"${{ github.ref_name }}"}'

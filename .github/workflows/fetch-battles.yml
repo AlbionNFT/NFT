@@ -1,9 +1,7 @@
 name: Fetch Albion Battle Boards Data
 
 on:
-  schedule:
-    - cron: '*/5 * * * *' # Corrected: Runs every 5 minutes, every day
-  workflow_dispatch: # Allows you to manually trigger the update from the Actions tab
+  workflow_dispatch: # Handled exclusively by the Master Orchestrator or manual overrides
 
 # Force the runner to execute all JavaScript actions using Node.js 24
 env:
@@ -24,8 +22,9 @@ jobs:
         run: |
           echo "Initiating retrieval sequence from Albion Online API..."
           curl -s -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
-          "https://gameinfo.albiononline.com/api/gameinfo/battles?range=week&offset=0&limit=40&sort=totalfame&guildId=AIbIw4erSVyHg9Ab6LVtdA" \
-          -o battle-data.json
+               --max-time 30 \
+               "https://gameinfo.albiononline.com/api/gameinfo/battles?range=week&offset=0&limit=40&sort=totalfame&guildId=AIbIw4erSVyHg9Ab6LVtdA" \
+               -o battle-data.json
           
           # Basic validation check to verify if the output is valid JSON
           if jq '.' battle-data.json >/dev/null 2>&1; then
