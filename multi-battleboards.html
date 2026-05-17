@@ -119,7 +119,7 @@
                                 <thead>
                                     <tr class="text-gray-500 border-b border-gray-900 bg-gray-900/10 font-bold uppercase tracking-wider">
                                         <th class="p-3">Alliance Tag</th>
-                                        <th class="p-3">Players</th>
+                                        <th class="p-3 text-center">Players</th>
                                         <th class="p-3 text-center text-emerald-400">Combined Kills</th>
                                         <th class="p-3 text-center text-red-400">Combined Deaths</th>
                                         <th class="p-3 text-right">Total Kill Fame</th>
@@ -150,7 +150,7 @@
                                     <tr class="text-gray-500 border-b border-gray-900 bg-gray-900/10 font-bold uppercase tracking-wider">
                                         <th class="p-3">Guild Name</th>
                                         <th class="p-3">Alliance</th>
-                                        <th class="p-3">Players</th>
+                                        <th class="p-3 text-center">Players</th>
                                         <th class="p-3 text-center text-emerald-400">Combined Kills</th>
                                         <th class="p-3 text-center text-red-400">Combined Deaths</th>
                                         <th class="p-3 text-right">Total Kill Fame</th>
@@ -329,10 +329,7 @@
         document.getElementById('alliance-dropdown').addEventListener('click', (e) => e.stopPropagation());
 
         function recalculateTotalCombatantMetrics() {
-            // 1. Calculate unique player count based on the global array length
             const totalUniquePlayers = globalPlayersArray.length;
-
-            // 2. Scan players list to calculate unique active guilds and alliances present
             const uniqueGuildsSet = new Set();
             const uniqueAlliancesSet = new Set();
 
@@ -345,7 +342,6 @@
                 }
             });
 
-            // 3. Update the tracking UI badge with the multi-layered breakdown summary
             const playerBadge = document.getElementById('player-count-badge');
             if (playerBadge) {
                 playerBadge.innerText = `${totalUniquePlayers} Players | ${uniqueGuildsSet.size} Guilds | ${uniqueAlliancesSet.size} Alliances Consolidated`;
@@ -399,18 +395,20 @@
                         const guildName = p.guildName || "Unknown Guild";
 
                         if (!allianceCombinedMap[allianceTag]) {
-                            allianceCombinedMap[allianceTag] = { name: allianceTag, kills: 0, deaths: 0, fame: 0 };
+                            allianceCombinedMap[allianceTag] = { name: allianceTag, kills: 0, deaths: 0, fame: 0, uniquePlayers: new Set() };
                         }
                         allianceCombinedMap[allianceTag].kills += (p.kills || 0);
                         allianceCombinedMap[allianceTag].deaths += (p.deaths || 0);
                         allianceCombinedMap[allianceTag].fame += (p.killFame || 0);
+                        allianceCombinedMap[allianceTag].uniquePlayers.add(characterName);
 
                         if (!guildCombinedMap[guildName]) {
-                            guildCombinedMap[guildName] = { name: guildName, alliance: allianceTag, kills: 0, deaths: 0, fame: 0 };
+                            guildCombinedMap[guildName] = { name: guildName, alliance: allianceTag, kills: 0, deaths: 0, fame: 0, uniquePlayers: new Set() };
                         }
                         guildCombinedMap[guildName].kills += (p.kills || 0);
                         guildCombinedMap[guildName].deaths += (p.deaths || 0);
                         guildCombinedMap[guildName].fame += (p.killFame || 0);
+                        guildCombinedMap[guildName].uniquePlayers.add(characterName);
 
                         if (!playerCombinedMap[characterName]) {
                             playerCombinedMap[characterName] = { name: characterName, guild: guildName, alliance: allianceTag, kills: 0, deaths: 0, fame: 0 };
@@ -421,15 +419,12 @@
                     });
                 });
 
-                // Save maps into globally accessible sorted data listings
                 globalAlliancesArray = Object.values(allianceCombinedMap).sort((a,b) => b.fame - a.fame);
                 globalGuildsArray = Object.values(guildCombinedMap).sort((a,b) => b.fame - a.fame);
                 globalPlayersArray = Object.values(playerCombinedMap);
 
-                // Execute multi-layer statistical counts
                 recalculateTotalCombatantMetrics();
 
-                // Render functional sub-tables
                 populateFilterMenus(Object.keys(guildCombinedMap), Object.keys(allianceCombinedMap));
                 renderAllianceTable();
                 renderGuildTable();
@@ -458,7 +453,7 @@
                 label.querySelector('input').addEventListener('change', function() {
                     if (this.checked) selectedGuilds.add(guildName);
                     else selectedGuilds.delete(guildName);
-                    currentPageTracker.player = 1; // Reset view window context to prevent blank layout indexing crashes
+                    currentPageTracker.player = 1; 
                     renderPlayerTable();
                 });
                 guildContainer.appendChild(label);
@@ -514,8 +509,6 @@
             renderPlayerTable();
         }
 
-        // --- Core Table Rendering Engines with Pagination Integration ---
-
         function renderAllianceTable() {
             const allianceTbody = document.getElementById('alliance-rows');
             allianceTbody.innerHTML = '';
@@ -523,7 +516,6 @@
             const totalItems = globalAlliancesArray.length;
             const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
             
-            // Boundary fallback guards
             if (currentPageTracker.alliance > totalPages) currentPageTracker.alliance = totalPages;
             
             const startIdx = (currentPageTracker.alliance - 1) * ITEMS_PER_PAGE;
@@ -531,13 +523,14 @@
             const paginatedItems = globalAlliancesArray.slice(startIdx, endIdx);
 
             if (paginatedItems.length === 0) {
-                allianceTbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-600 italic">No alliance logs recorded.</td></tr>`;
+                allianceTbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-600 italic">No alliance logs recorded.</td></tr>`;
             } else {
                 paginatedItems.forEach(a => {
                     const row = document.createElement('tr');
                     row.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-950";
                     row.innerHTML = `
                         <td class="p-3 font-bold text-gray-200">${a.name === 'NONE' ? '<span class="text-gray-600 italic">[No Alliance]</span>' : a.name}</td>
+                        <td class="p-3 text-center font-medium font-mono text-gray-400">${a.uniquePlayers.size}</td>
                         <td class="p-3 text-center font-bold text-emerald-400">${a.kills}</td>
                         <td class="p-3 text-center font-bold text-red-400">${a.deaths}</td>
                         <td class="p-3 text-right font-black font-mono text-gray-400">${formatCompactFame(a.fame)}</td>
@@ -546,7 +539,6 @@
                 });
             }
 
-            // Sync Footer UI Buttons Control Nodes
             document.getElementById('alliance-page-info').innerText = `Page ${currentPageTracker.alliance} of ${totalPages}`;
             document.getElementById('btn-alliance-prev').disabled = (currentPageTracker.alliance === 1);
             document.getElementById('btn-alliance-next').disabled = (currentPageTracker.alliance === totalPages);
@@ -566,7 +558,7 @@
             const paginatedItems = globalGuildsArray.slice(startIdx, endIdx);
 
             if (paginatedItems.length === 0) {
-                guildTbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-600 italic">No guild logs recorded.</td></tr>`;
+                guildTbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-600 italic">No guild logs recorded.</td></tr>`;
             } else {
                 paginatedItems.forEach(g => {
                     const row = document.createElement('tr');
@@ -574,6 +566,7 @@
                     row.innerHTML = `
                         <td class="p-3 font-bold text-amber-400">${g.name}</td>
                         <td class="p-3 font-medium text-gray-500">${g.alliance === 'NONE' ? '-' : g.alliance}</td>
+                        <td class="p-3 text-center font-medium font-mono text-gray-400">${g.uniquePlayers.size}</td>
                         <td class="p-3 text-center font-bold text-emerald-400">${g.kills}</td>
                         <td class="p-3 text-center font-bold text-red-400">${g.deaths}</td>
                         <td class="p-3 text-right font-black font-mono text-gray-400">${formatCompactFame(g.fame)}</td>
@@ -593,7 +586,6 @@
 
             let processedList = [...globalPlayersArray];
 
-            // Real-time matrix profile execution parameters filters
             if (selectedGuilds.size > 0) {
                 processedList = processedList.filter(p => selectedGuilds.has(p.guild));
             }
@@ -601,7 +593,6 @@
                 processedList = processedList.filter(p => selectedAlliances.has(p.alliance));
             }
 
-            // Execute client-side programmatic query array structure sorting
             processedList.sort((a, b) => {
                 return isDescending ? (b[activeSortColumn] - a[activeSortColumn]) : (a[activeSortColumn] - b[activeSortColumn]);
             });
@@ -651,7 +642,6 @@
             document.getElementById('btn-player-next').disabled = (currentPageTracker.player === totalPages);
         }
 
-        // Global pagination click coordinator mapping handles execution sequences
         function changePage(tableType, directionalStep) {
             currentPageTracker[tableType] += directionalStep;
             
@@ -668,6 +658,6 @@
         }
 
         processMultiBattleAggregation();
-</script>
+    </script>
 </body>
 </html>
