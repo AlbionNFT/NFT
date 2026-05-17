@@ -2,8 +2,12 @@ name: Update Guild Member Chronicle
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # Executes securely every 3 hours to capture roster changes
+    - cron: '*/5 * * * *' # Executes securely every 5 minutes to capture roster changes
   workflow_dispatch:      # Grants you a physical manual override button on GitHub
+
+# Force the runner to execute all JavaScript actions using Node.js 24
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
   contents: write

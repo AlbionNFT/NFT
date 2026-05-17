@@ -2,8 +2,12 @@ name: Fetch Albion Guild Data
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # Corrected: Runs every 30 minutes, every day
+    - cron: '*/5 * * * *' # Corrected: Runs every 5 minutes, every day
   workflow_dispatch: # Allows you to click a button to update manually
+
+# Force the runner to execute all JavaScript actions using Node.js 24
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
   contents: write

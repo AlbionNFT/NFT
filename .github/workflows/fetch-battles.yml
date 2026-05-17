@@ -2,9 +2,12 @@ name: Fetch Albion Battle Boards Data
 
 on:
   schedule:
-    # Runs every 6 hours (At minute 0 past every 6th hour)
-    - cron: '0 */6 * * *'
+    - cron: '*/5 * * * *' # Corrected: Runs every 5 minutes, every day
   workflow_dispatch: # Allows you to manually trigger the update from the Actions tab
+
+# Force the runner to execute all JavaScript actions using Node.js 24
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
   contents: write # Grants write permissions to your repository to commit the data file
