@@ -27,8 +27,9 @@
     <div id="loading" class="text-xl font-semibold text-gray-400">Fetching Guild Data...</div>
 
     <script>
-// Fetch directly from your own repository file instead of the Albion API
-const localJsonUrl = './guild-data.json';
+// Fetch directly from your own repository file instead of the Albion API       
+// This forces the browser to look for a fresh file every single time
+const localJsonUrl = `./guild-data.json?t=${Date.now()}`;
 
 async function fetchGuildData() {
     try {
