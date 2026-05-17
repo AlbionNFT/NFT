@@ -269,9 +269,9 @@
             function formatCompactFame(num) {
                 if (!num || isNaN(num)) return "0";
                 const rawValue = parseFloat(num);
-                if (rawValue >= 1e12) return (rawValue / 1e12).toFixed(2) + 'Trillions';
-                if (rawValue >= 1e9) return (rawValue / 1e9).toFixed(2) + 'Billions';
-                if (rawValue >= 1e6) return (rawValue / 1e6).toFixed(2) + 'Millions';
+                if (rawValue >= 1e12) return (rawValue / 1e12).toFixed(2) + 'Trillion';
+                if (rawValue >= 1e9) return (rawValue / 1e9).toFixed(2) + 'Billion';
+                if (rawValue >= 1e6) return (rawValue / 1e6).toFixed(2) + 'Million';
                 return rawValue.toLocaleString();
             }
 
