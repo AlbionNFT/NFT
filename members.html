@@ -79,7 +79,7 @@
                     Guild <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500">Vanguard</span>
                 </h1>
                 <p class="text-gray-400 text-sm sm:text-base max-w-xl mx-auto">
-                    A comprehensive roster log tracking tracking active kill counts, crafting value indexes, and operational updates.
+                    A comprehensive roster log tracking active kill counts, crafting value indexes, and operational updates.
                 </p>
             </section>
 
@@ -164,6 +164,21 @@
         
         let localRosterDataset = [];
 
+        // Formatting Engine: Converts 44217640 to "44.2 Million", 1500000000 to "1.5 Billion"
+        function formatFameNumber(num) {
+            if (num === null || num === undefined || isNaN(num)) return "0";
+            if (num >= 1e9) {
+                return (num / 1e9).toFixed(1).replace(/\.0$/, '') + ' Billion';
+            }
+            if (num >= 1e6) {
+                return (num / 1e6).toFixed(1).replace(/\.0$/, '') + ' Million';
+            }
+            if (num >= 1e3) {
+                return (num / 1e3).toFixed(1).replace(/\.0$/, '') + 'k';
+            }
+            return num.toString();
+        }
+
         async function fetchRosterData() {
             try {
                 const response = await fetch(membersJsonUrl);
@@ -207,14 +222,14 @@
             
             document.getElementById('stat-total-count').innerText = members.length;
             
-            // Top kill fame member tracking (first index post-sorting layout)
+            // Top kill fame member tracking
             const topSlayer = members[0];
-            document.getElementById('stat-top-pvp').innerText = `${topSlayer.Name} (${(topSlayer.KillFame || 0).toLocaleString()})`;
+            document.getElementById('stat-top-pvp').innerText = `${topSlayer.Name} (${formatFameNumber(topSlayer.KillFame)})`;
 
-            // Arithmetic mean generation for absolute dynamic PvP metric value
+            // Arithmetic mean generation for top overview card
             const totalKillFame = members.reduce((sum, current) => sum + (current.KillFame || 0), 0);
             const averageFame = Math.round(totalKillFame / members.length);
-            document.getElementById('stat-avg-fame').innerText = averageFame.toLocaleString();
+            document.getElementById('stat-avg-fame').innerText = formatFameNumber(averageFame);
         }
 
         function renderRosterGrid(members) {
@@ -237,18 +252,18 @@
                 const killFame = player.KillFame || 0;
                 const deathFame = player.DeathFame || 0;
                 
-                // Directly pull the provided FameRatio string value from the JSON payload
+                // Pull directly from raw JSON value
                 const ratio = player.FameRatio !== undefined ? Number(player.FameRatio).toFixed(2) : "0.00";
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/40 text-gray-300";
                 tr.innerHTML = `
                     <td class="py-3.5 px-6 font-bold text-white tracking-wide">${player.Name}</td>
-                    <td class="py-3.5 px-4 text-right text-gray-500 font-mono text-xs">${deathFame.toLocaleString()}</td>
-                    <td class="py-3.5 px-4 text-right text-red-400 font-mono text-xs">${killFame.toLocaleString()}</td>
+                    <td class="py-3.5 px-4 text-right text-gray-500 font-mono text-xs">${formatFameNumber(deathFame)}</td>
+                    <td class="py-3.5 px-4 text-right text-red-400 font-mono text-xs">${formatFameNumber(killFame)}</td>
                     <td class="py-3.5 px-4 text-right ${ratio >= 1.0 ? 'text-emerald-400' : 'text-amber-500/70'} font-mono text-xs">${ratio}</td>
                     <td class="py-3.5 px-6 text-center">
-                        <a href="https://albiondb.net/player/${player.Name }" target="_blank" class="inline-flex items-center space-x-1 text-[11px] bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-black font-bold px-2 py-1 rounded border border-amber-500/20 hover:border-transparent transition-all tracking-wider uppercase">
+                        <a href="https://albiondb.net/player/${player.Name}" target="_blank" class="inline-flex items-center space-x-1 text-[11px] bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-black font-bold px-2 py-1 rounded border border-amber-500/20 hover:border-transparent transition-all tracking-wider uppercase">
                             <span>Profile</span> <i class="fas fa-arrow-up-right-from-square text-[9px]"></i>
                         </a>
                     </td>
@@ -265,7 +280,7 @@
             renderRosterGrid(matchingSubset);
         }
 
-        // Initialize operational load routines 
+        // Initialize load sequence
         fetchRosterData();
     </script>
 </body>
