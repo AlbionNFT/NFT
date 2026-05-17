@@ -111,7 +111,7 @@
                 <div class="glass-panel rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between">
                     <div>
                         <div class="p-4 bg-gray-950/40 border-b border-gray-800/60 flex items-center justify-between">
-                            <span class="text-xs font-black uppercase tracking-wider text-amber-400">Alliances Spectrum Summary</span>
+                            <span class="text-xs font-black uppercase tracking-wider text-amber-400">Alliances Summary</span>
                             <i class="fas fa-shield-alt text-gray-600 text-sm"></i>
                         </div>
                         <div class="overflow-x-auto">
@@ -119,6 +119,7 @@
                                 <thead>
                                     <tr class="text-gray-500 border-b border-gray-900 bg-gray-900/10 font-bold uppercase tracking-wider">
                                         <th class="p-3">Alliance Tag</th>
+                                        <th class="p-3">Total Players</th>
                                         <th class="p-3 text-center text-emerald-400">Combined Kills</th>
                                         <th class="p-3 text-center text-red-400">Combined Deaths</th>
                                         <th class="p-3 text-right">Total Kill Fame</th>
@@ -149,6 +150,7 @@
                                     <tr class="text-gray-500 border-b border-gray-900 bg-gray-900/10 font-bold uppercase tracking-wider">
                                         <th class="p-3">Guild Name</th>
                                         <th class="p-3">Alliance</th>
+                                        <th class="p-3">Total Players</th>
                                         <th class="p-3 text-center text-emerald-400">Combined Kills</th>
                                         <th class="p-3 text-center text-red-400">Combined Deaths</th>
                                         <th class="p-3 text-right">Total Kill Fame</th>
@@ -326,6 +328,36 @@
         document.getElementById('guild-dropdown').addEventListener('click', (e) => e.stopPropagation());
         document.getElementById('alliance-dropdown').addEventListener('click', (e) => e.stopPropagation());
 
+        function recalculateTotalCombatantMetrics() {
+            // 1. Calculate unique player count based on the global array length
+            const totalUniquePlayers = globalPlayersArray.length;
+
+            // 2. Scan players list to calculate unique active guilds and alliances present
+            const uniqueGuildsSet = new Set();
+            const uniqueAlliancesSet = new Set();
+
+            globalPlayersArray.forEach(player => {
+                if (player.guild && player.guild !== "Unknown Guild") {
+                    uniqueGuildsSet.add(player.guild);
+                }
+                if (player.alliance && player.alliance !== "NONE") {
+                    uniqueAlliancesSet.add(player.alliance);
+                }
+            });
+
+            // 3. Update the tracking UI badge with the multi-layered breakdown summary
+            const playerBadge = document.getElementById('player-count-badge');
+            if (playerBadge) {
+                playerBadge.innerText = `${totalUniquePlayers} Players | ${uniqueGuildsSet.size} Guilds | ${uniqueAlliancesSet.size} Alliances Consolidated`;
+            }
+
+            return {
+                players: totalUniquePlayers,
+                guilds: uniqueGuildsSet.size,
+                alliances: uniqueAlliancesSet.size
+            };
+        }
+
         async function processMultiBattleAggregation() {
             const targetIds = getQueryBattleIds();
             if (targetIds.length === 0) {
@@ -394,7 +426,8 @@
                 globalGuildsArray = Object.values(guildCombinedMap).sort((a,b) => b.fame - a.fame);
                 globalPlayersArray = Object.values(playerCombinedMap);
 
-                document.getElementById('player-count-badge').innerText = `${globalPlayersArray.length} Unique Combatants Consolidated`;
+                // Execute multi-layer statistical counts
+                recalculateTotalCombatantMetrics();
 
                 // Render functional sub-tables
                 populateFilterMenus(Object.keys(guildCombinedMap), Object.keys(allianceCombinedMap));
@@ -635,6 +668,6 @@
         }
 
         processMultiBattleAggregation();
-    </script>
+</script>
 </body>
 </html>
