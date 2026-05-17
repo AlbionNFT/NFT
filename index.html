@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NoFreeThinkers | Albion Online Guild</title>
+
+    <meta name="title" content="NoFreeThinkers | Albion Online Guild">
+    <meta name="description" content="A dedicated Outlands brotherhood forging our legacy in Albion Online. View active roster statistics, custom ZvZ builds, and combat analytics telemetry charts.">
+    
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://albionnft.github.io/NFT/">
+    <meta property="og:title" content="NoFreeThinkers | Outlands Division">
+    <meta property="og:description" content="⚔️ 25M Kill Fame Minimum | Max Spec ZvZ Requirements. Enter the archives to view tactical battle boards, current roster metrics, and enlistment operations.">
+    
+    <meta property="og:image" content="https://albionnft.github.io/NFT/assets/banner.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    
+    <meta name="theme-color" content="#fbbf24">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -46,7 +61,7 @@
                 <span class="text-xl font-bold tracking-wider text-amber-400 uppercase">NoFreeThinkers</span>
             </div>
             
-            <nav class="hidden md:flex space-x-6 lg:space-x-8 text-sm font-medium tracking-wide">
+            <nav class="hidden md:flex space-x-6 lg:space-x-8 text-sm font-medium tracking-wide">   
                 <a href="#" class="text-amber-400 border-b-2 border-amber-400 pb-1">Home</a>
                 <a href="#stats" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Guild Stats</a>
                 <a href="members.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Members</a>
@@ -201,27 +216,17 @@
     </footer>
 
     <script>
-        // Absolute repository route setup
         const githubUser = 'AlbionNFT';
         const repoName = 'NFT'; 
         const localJsonUrl = `https://${githubUser}.github.io/${repoName}/guild-data.json?t=${Date.now()}`;
 
-        // Helper function to convert raw numbers to compact formatting (Millions, Billions, Trillions)
         function formatCompactFame(num) {
             if (!num || isNaN(num)) return "0";
-            
             const rawValue = parseFloat(num);
-            
-            if (rawValue >= 1e12) {
-                return (rawValue / 1e12).toFixed(2) + 'T'; // Trillions
-            }
-            if (rawValue >= 1e9) {
-                return (rawValue / 1e9).toFixed(2) + 'B';  // Billions
-            }
-            if (rawValue >= 1e6) {
-                return (rawValue / 1e6).toFixed(2) + 'M';  // Millions
-            }
-            return rawValue.toLocaleString(); // Fallback for small values
+            if (rawValue >= 1e12) return (rawValue / 1e12).toFixed(2) + 'Trillions';
+            if (rawValue >= 1e9) return (rawValue / 1e9).toFixed(2) + 'Billions';
+            if (rawValue >= 1e6) return (rawValue / 1e6).toFixed(2) + 'Millions';
+            return rawValue.toLocaleString();
         }
 
         async function fetchGuildData() {
@@ -232,11 +237,8 @@
                 
                 const data = await response.json();
                 
-                // Map API values safely using structural properties verified earlier
                 const guildName = data.Name || "NoFreeThinkers";
                 const memberCount = data.MemberCount || 0;
-                
-                // Run the raw numeric killFame value through the compact formatter tool
                 const killFame = data.killFame ? formatCompactFame(data.killFame) : "0";
                 
                 let allianceText = "Independent / No Alliance";
@@ -244,20 +246,17 @@
                     allianceText = data.AllianceName ? `[${data.AllianceTag}] ${data.AllianceName}` : `Alliance Tag: [${data.AllianceTag}]`;
                 }
 
-                // Render values to UI
                 document.getElementById('guild-name').innerText = guildName;
                 document.getElementById('alliance-name').innerText = allianceText;
                 document.getElementById('member-count').innerText = memberCount;
                 document.getElementById('kill-fame').innerText = killFame;
                 
-                // Transition interface frames
                 const loader = document.getElementById('loading');
                 const card = document.getElementById('guild-card');
                 
                 loader.classList.add('hidden');
                 card.classList.remove('hidden');
                 
-                // Trigger a clean fluid fade-in effect via styles
                 setTimeout(() => {
                     card.classList.remove('opacity-0', 'translate-y-4');
                 }, 50);
@@ -275,9 +274,7 @@
             }
         }
 
-        // Initialize fetch routine
         fetchGuildData();
-        
     </script>
 </body>
 </html>
