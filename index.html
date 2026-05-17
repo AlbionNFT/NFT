@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guild — Albion Online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8C97A;
+    --gold-dim: #7A6230;
+    --blood: #8B1A1A;
+    --blood-light: #B52020;
+    --stone: #1A1610;
+    --stone-mid: #252018;
+    --stone-light: #32291E;
+    --stone-border: #3D3220;
+    --parchment: #D4C4A0;
+    --parchment-dim: #8A7A60;
+    --text: #E8DFC8;
+    --text-dim: #9A8E78;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--stone);
+    color: var(--text);
+    font-family: 'Crimson Text', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(139,26,26,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(201,168,76,0.04) 0%, transparent 50%),
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(201,168,76,0.015) 2px, rgba(201,168,76,0.015) 3px),
+      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(201,168,76,0.008) 40px, rgba(201,168,76,0.008) 41px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  * { position: relative; z-index: 1; }
+
+  /* ── LOADING ── */
+  #loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 2rem;
+  }
+  .loading-crest {
+    width: 80px; height: 80px;
+    border: 2px solid var(--gold-dim);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 1.2s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: 'Cinzel', serif;
+    color: var(--gold-dim);
+    letter-spacing: 0.3em;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+  #error {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 1rem;
+    text-align: center;
+    padding: 2rem;
+  }
+  #error h2 { font-family: 'Cinzel', serif; color: var(--blood-light); font-size: 1.5rem; }
+  #error p { color: var(--text-dim); max-width: 500px; font-size: 1rem; }
+
+  /* ── MAIN ── */
+  #main { display: none; }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    text-align: center;
+    padding: 5rem 2rem 4rem;
+    border-bottom: 1px solid var(--stone-border);
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 100% at 50% 0%, rgba(139,26,26,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .ornament-line {
+    height: 1px;
+    width: 120px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  }
+  .ornament-diamond {
+    width: 8px; height: 8px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+
+  .guild-coat {
+    width: 100px; height: 100px;
+    margin: 0 auto 1.5rem;
+    border: 2px solid var(--gold-dim);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--stone-mid);
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+  }
+  .guild-coat img {
+    width: 70px; height: 70px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 8px rgba(201,168,76,0.3));
+  }
+  .guild-coat-fallback {
+    font-family: 'Cinzel', serif;
+    font-size: 2.5rem;
+    color: var(--gold);
+    font-weight: 900;
+  }
+
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    font-weight: 900;
+    color: var(--gold-light);
+    letter-spacing: 0.05em;
+    text-shadow: 0 2px 20px rgba(201,168,76,0.2);
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+  }
+
+  .guild-tagline {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.4em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  .alliance-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--stone-light);
+    border: 1px solid var(--stone-border);
+    border-radius: 4px;
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    color: var(--parchment-dim);
+  }
+  .alliance-badge strong { color: var(--parchment); font-style: italic; }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    background: rgba(26,22,16,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--stone-border);
+    z-index: 100;
+    padding: 0 2rem;
+  }
+  nav ul {
+    display: flex;
+    list-style: none;
+    justify-content: center;
+    gap: 0;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  nav a {
+    display: block;
+    padding: 1rem 1.5rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+  nav a:hover { color: var(--gold); border-bottom-color: var(--gold-dim); }
+
+  /* ── SECTIONS ── */
+  section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+  }
+  section + section {
+    border-top: 1px solid var(--stone-border);
+  }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  .section-title h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+  .section-title-line {
+    height: 1px;
+    flex: 1;
+    background: linear-gradient(90deg, var(--stone-border), transparent);
+  }
+
+  /* ── STATS GRID ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--stone-border);
+    border: 1px solid var(--stone-border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .stat-card {
+    background: var(--stone-mid);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: background 0.2s;
+  }
+  .stat-card:hover { background: var(--stone-light); }
+  .stat-value {
+    font-family: 'Cinzel', serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--gold-light);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-family: 'Cinzel', serif;
+  }
+
+  /* ── FOUNDER / INFO ── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+  .info-card {
+    background: var(--stone-mid);
+    border: 1px solid var(--stone-border);
+    border-radius: 6px;
+    padding: 1.5rem 2rem;
+  }
+  .info-card-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.35em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .info-card-value {
+    font-size: 1.15rem;
+    color: var(--parchment);
+  }
+  .info-card-value.founder {
+    font-style: italic;
+    font-size: 1.3rem;
+    color: var(--gold-light);
+  }
+
+  /* ── MEMBERS TABLE ── */
+  .members-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .search-box {
+    flex: 1;
+    min-width: 200px;
+    background: var(--stone-mid);
+    border: 1px solid var(--stone-border);
+    border-radius: 4px;
+    padding: 0.6rem 1rem;
+    color: var(--text);
+    font-family: 'Crimson Text', serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box::placeholder { color: var(--text-dim); }
+  .search-box:focus { border-color: var(--gold-dim); }
+
+  .sort-btn {
+    background: var(--stone-mid);
+    border: 1px solid var(--stone-border);
+    border-radius: 4px;
+    padding: 0.6rem 1.2rem;
+    color: var(--text-dim);
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sort-btn:hover, .sort-btn.active { border-color: var(--gold-dim); color: var(--gold); }
+
+  .members-count {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+    margin-left: auto;
+  }
+
+  .members-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--stone-border);
+    border-radius: 6px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  thead tr {
+    background: var(--stone-light);
+    border-bottom: 1px solid var(--stone-border);
+  }
+  th {
+    padding: 1rem 1.25rem;
+    text-align: left;
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  th:hover { color: var(--gold); }
+  th .sort-arrow { margin-left: 4px; opacity: 0.4; }
+  th.sorted .sort-arrow { opacity: 1; color: var(--gold); }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(61,50,32,0.5);
+    transition: background 0.15s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--stone-light); }
+  td {
+    padding: 0.85rem 1.25rem;
+    color: var(--text);
+  }
+  td.name { color: var(--parchment); font-size: 1rem; }
+  td.guild-rank {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+  }
+  td.fame {
+    font-family: 'Cinzel', serif;
+    color: var(--gold-light);
+    font-size: 0.95rem;
+  }
+  td.joined { color: var(--text-dim); font-size: 0.9rem; }
+
+  .rank-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    font-family: 'Cinzel', serif;
+  }
+  .rank-5 { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
+  .rank-4 { background: rgba(139,26,26,0.2); color: #D05050; border: 1px solid rgba(139,26,26,0.3); }
+  .rank-3 { background: rgba(50,41,30,0.8); color: #9A8E78; border: 1px solid var(--stone-border); }
+  .rank-2 { background: rgba(37,32,24,0.8); color: #6A6050; border: 1px solid rgba(61,50,32,0.4); }
+  .rank-1 { background: rgba(26,22,16,0.8); color: #4A4030; border: 1px solid rgba(61,50,32,0.3); }
+
+  .no-results {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--stone-border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  footer .ornament { margin-bottom: 1rem; }
+  .powered {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    color: rgba(138,122,96,0.5);
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+  }
+
+  @media (max-width: 600px) {
+    nav ul { gap: 0; }
+    nav a { padding: 0.8rem 0.8rem; font-size: 0.65rem; }
+    .stat-value { font-size: 1.6rem; }
+    td { padding: 0.7rem 0.8rem; font-size: 0.85rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="loading-crest"></div>
+  <p class="loading-text">Summoning guild records...</p>
+</div>
+
+<div id="error">
+  <h2>Guild Records Unavailable</h2>
+  <p id="error-msg">The Albion Online API could not be reached. This may be due to CORS restrictions — try opening this file from a local server.</p>
+  <p style="margin-top:1rem; font-size:0.85rem; color:var(--gold-dim);">Guild ID: AIbIw4erSVyHg9Ab6LVtdA</p>
+</div>
+
+<div id="main">
+  <header>
+    <div class="ornament">
+      <div class="ornament-line"></div>
+      <div class="ornament-diamond"></div>
+      <div class="ornament-line"></div>
+    </div>
+    <div class="guild-coat">
+      <div class="guild-coat-fallback" id="coat-fallback">⚔</div>
+    </div>
+    <p class="guild-tagline" id="guild-tagline">Albion Online · Guild</p>
+    <h1 id="guild-name">Loading...</h1>
+    <div id="alliance-wrap" style="margin-top:1.2rem; display:none;">
+      <span class="alliance-badge">Alliance: <strong id="alliance-name"></strong></span>
+    </div>
+  </header>
+
+  <nav>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#info">Details</a></li>
+      <li><a href="#members">Members</a></li>
+    </ul>
+  </nav>
+
+  <section id="overview">
+    <div class="section-title">
+      <h2>Guild Overview</h2>
+      <div class="section-title-line"></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-members">—</div>
+        <div class="stat-label">Members</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-fame">—</div>
+        <div class="stat-label">Total Fame</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-kills">—</div>
+        <div class="stat-label">Kills</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-deaths">—</div>
+        <div class="stat-label">Deaths</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-kd">—</div>
+        <div class="stat-label">K/D Ratio</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="info">
+    <div class="section-title">
+      <h2>Guild Details</h2>
+      <div class="section-title-line"></div>
+    </div>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-card-label">Guild Master</div>
+        <div class="info-card-value founder" id="info-founder">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Founded</div>
+        <div class="info-card-value" id="info-founded">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Alliance</div>
+        <div class="info-card-value" id="info-alliance">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Guild ID</div>
+        <div class="info-card-value" style="font-size:0.85rem; color:var(--text-dim); word-break:break-all;" id="info-id">—</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="members">
+    <div class="section-title">
+      <h2>Members</h2>
+      <div class="section-title-line"></div>
+    </div>
+    <div class="members-controls">
+      <input type="text" class="search-box" id="member-search" placeholder="Search by name...">
+      <span class="members-count" id="members-count"></span>
+    </div>
+    <div class="members-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('name')" id="th-name">#&nbsp;&nbsp;Name <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTable('guildRank')" id="th-guildRank">Rank <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTable('killFame')" id="th-killFame">Kill Fame <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTable('deathFame')" id="th-deathFame">Death Fame <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTable('joinedAt')" id="th-joinedAt">Joined <span class="sort-arrow">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="members-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <div class="ornament">
+      <div class="ornament-line" style="width:60px"></div>
+      <div class="ornament-diamond"></div>
+      <div class="ornament-line" style="width:60px"></div>
+    </div>
+    <p id="footer-guild">Guild</p>
+    <p class="powered">Data sourced from Albion Online API · Built for glory</p>
+  </footer>
+</div>
+
+<script>
+const GUILD_ID = 'AIbIw4erSVyHg9Ab6LVtdA';
+const API_BASE = 'https://gameinfo.albiononline.com/api/gameinfo';
+
+let allMembers = [];
+let sortKey = 'killFame';
+let sortDir = -1;
+
+function fmt(n) {
+  if (n == null || n === 0) return '0';
+  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return String(n);
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-GB', { year:'numeric', month:'short', day:'numeric' });
+}
+
+const RANK_NAMES = {5:'Guild Master',4:'Officer',3:'Member',2:'Initiate',1:'Recruit'};
+function rankName(r) { return RANK_NAMES[r] || ('Rank ' + r); }
+function rankClass(r) { return 'rank-' + Math.min(5, Math.max(1, r||1)); }
+
+async function fetchGuild() {
+  const res = await fetch(`${API_BASE}/guilds/${GUILD_ID}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function fetchMembers() {
+  const res = await fetch(`${API_BASE}/guilds/${GUILD_ID}/members`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function fetchStats() {
+  try {
+    const res = await fetch(`${API_BASE}/guilds/${GUILD_ID}/topplayers`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+function populateGuild(g) {
+  document.title = (g.Name || 'Guild') + ' — Albion Online';
+  document.getElementById('guild-name').textContent = g.Name || '—';
+  document.getElementById('footer-guild').textContent = g.Name || 'Guild';
+  document.getElementById('guild-tagline').textContent =
+    (g.AllianceName ? g.AllianceName + ' · ' : '') + 'Albion Online · Guild';
+  document.getElementById('info-id').textContent = g.Id || GUILD_ID;
+
+  if (g.AllianceName) {
+    document.getElementById('alliance-wrap').style.display = 'block';
+    document.getElementById('alliance-name').textContent = g.AllianceName;
+    document.getElementById('info-alliance').textContent = g.AllianceName;
+  } else {
+    document.getElementById('info-alliance').textContent = 'No Alliance';
+  }
+
+  const founder = g.FounderId ? (g.FounderId) : '—';
+  document.getElementById('info-founder').textContent = g.GuildMaster || founder;
+
+  const created = g.founded || g.Founded || g.createdAt || g.CreatedAt;
+  document.getElementById('info-founded').textContent = fmtDate(created);
+
+  const initials = (g.Name||'G').replace(/[^A-Z]/g,'').slice(0,2) || (g.Name||'G').slice(0,2).toUpperCase();
+  document.getElementById('coat-fallback').textContent = initials || '⚔';
+
+  if (g.GuildLogoUrl) {
+    const img = document.createElement('img');
+    img.src = g.GuildLogoUrl;
+    img.alt = g.Name + ' logo';
+    img.onerror = () => {};
+    document.querySelector('.guild-coat').appendChild(img);
+  }
+}
+
+function populateStats(members) {
+  const totalKill = members.reduce((a,m) => a + (m.KillFame||0), 0);
+  const totalDeath = members.reduce((a,m) => a + (m.DeathFame||0), 0);
+  const kills = members.reduce((a,m) => a + (m.LifetimeStatistics?.PvE?.Kills||0), 0);
+  const deaths = members.reduce((a,m) => a + (m.LifetimeStatistics?.PvP?.Deaths||0), 0);
+
+  document.getElementById('stat-members').textContent = members.length;
+  document.getElementById('stat-fame').textContent = fmt(totalKill);
+  document.getElementById('stat-kills').textContent = kills > 0 ? fmt(kills) : '—';
+  document.getElementById('stat-deaths').textContent = deaths > 0 ? fmt(deaths) : '—';
+  const kd = deaths > 0 ? (kills/deaths).toFixed(2) : (kills > 0 ? '∞' : '—');
+  document.getElementById('stat-kd').textContent = kd;
+}
+
+function renderMembers() {
+  const q = document.getElementById('member-search').value.trim().toLowerCase();
+  let list = allMembers.filter(m => !q || (m.Name||'').toLowerCase().includes(q));
+
+  list.sort((a,b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (sortKey === 'name') { av = (av||'').toLowerCase(); bv = (bv||'').toLowerCase(); }
+    if (av == null) av = sortDir === 1 ? Infinity : -Infinity;
+    if (bv == null) bv = sortDir === 1 ? Infinity : -Infinity;
+    return sortDir * (av < bv ? -1 : av > bv ? 1 : 0);
+  });
+
+  document.getElementById('members-count').textContent =
+    list.length + ' of ' + allMembers.length + ' members';
+
+  const tbody = document.getElementById('members-tbody');
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="no-results">No members found</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map((m, i) => `
+    <tr>
+      <td class="name"><span style="color:var(--text-dim);margin-right:0.75rem;font-size:0.8rem;">${i+1}</span>${m.Name||'Unknown'}</td>
+      <td class="guild-rank"><span class="rank-badge ${rankClass(m.GuildRank)}">${rankName(m.GuildRank)}</span></td>
+      <td class="fame">${fmt(m.KillFame)}</td>
+      <td class="fame" style="color:var(--text-dim)">${fmt(m.DeathFame)}</td>
+      <td class="joined">${fmtDate(m.JoinedAt)}</td>
+    </tr>
+  `).join('');
+}
+
+function sortTable(key) {
+  if (sortKey === key) { sortDir *= -1; }
+  else { sortKey = key; sortDir = key === 'name' ? 1 : -1; }
+  document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
+  const th = document.getElementById('th-' + key);
+  if (th) {
+    th.classList.add('sorted');
+    th.querySelector('.sort-arrow').textContent = sortDir === 1 ? '↑' : '↓';
+  }
+  renderMembers();
+}
+
+document.getElementById('member-search').addEventListener('input', renderMembers);
+
+async function init() {
+  try {
+    const [guild, members] = await Promise.all([fetchGuild(), fetchMembers()]);
+    populateGuild(guild);
+
+    allMembers = members || [];
+    populateStats(allMembers);
+
+    // set initial sort indicator
+    const th = document.getElementById('th-killFame');
+    if (th) { th.classList.add('sorted'); th.querySelector('.sort-arrow').textContent = '↓'; }
+
+    renderMembers();
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'flex';
+    document.getElementById('error-msg').textContent =
+      'Could not reach the Albion Online API. This is likely a CORS issue when opening the file directly. ' +
+      'Try serving it via a local web server (e.g. python3 -m http.server), or deploy it online. ' +
+      'Error: ' + err.message;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
