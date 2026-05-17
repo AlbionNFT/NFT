@@ -1,760 +1,452 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Guild — Albion Online</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --gold: #C9A84C;
-    --gold-light: #E8C97A;
-    --gold-dim: #7A6230;
-    --blood: #8B1A1A;
-    --blood-light: #B52020;
-    --stone: #1A1610;
-    --stone-mid: #252018;
-    --stone-light: #32291E;
-    --stone-border: #3D3220;
-    --parchment: #D4C4A0;
-    --parchment-dim: #8A7A60;
-    --text: #E8DFC8;
-    --text-dim: #9A8E78;
-  }
-
-  html { scroll-behavior: smooth; }
-
-  body {
-    background-color: var(--stone);
-    color: var(--text);
-    font-family: 'Crimson Text', Georgia, serif;
-    font-size: 18px;
-    line-height: 1.6;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* ── BACKGROUND TEXTURE ── */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(139,26,26,0.08) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(201,168,76,0.04) 0%, transparent 50%),
-      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(201,168,76,0.015) 2px, rgba(201,168,76,0.015) 3px),
-      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(201,168,76,0.008) 40px, rgba(201,168,76,0.008) 41px);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  * { position: relative; z-index: 1; }
-
-  /* ── LOADING ── */
-  #loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    gap: 2rem;
-  }
-  .loading-crest {
-    width: 80px; height: 80px;
-    border: 2px solid var(--gold-dim);
-    border-top-color: var(--gold);
-    border-radius: 50%;
-    animation: spin 1.2s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text {
-    font-family: 'Cinzel', serif;
-    color: var(--gold-dim);
-    letter-spacing: 0.3em;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
-
-  #error {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    gap: 1rem;
-    text-align: center;
-    padding: 2rem;
-  }
-  #error h2 { font-family: 'Cinzel', serif; color: var(--blood-light); font-size: 1.5rem; }
-  #error p { color: var(--text-dim); max-width: 500px; font-size: 1rem; }
-
-  /* ── MAIN ── */
-  #main { display: none; }
-
-  /* ── HEADER ── */
-  header {
-    position: relative;
-    text-align: center;
-    padding: 5rem 2rem 4rem;
-    border-bottom: 1px solid var(--stone-border);
-    overflow: hidden;
-  }
-  header::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse 70% 100% at 50% 0%, rgba(139,26,26,0.15) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  .ornament {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-  }
-  .ornament-line {
-    height: 1px;
-    width: 120px;
-    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
-  }
-  .ornament-diamond {
-    width: 8px; height: 8px;
-    background: var(--gold);
-    transform: rotate(45deg);
-    flex-shrink: 0;
-  }
-
-  .guild-coat {
-    width: 100px; height: 100px;
-    margin: 0 auto 1.5rem;
-    border: 2px solid var(--gold-dim);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--stone-mid);
-    box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
-  }
-  .guild-coat img {
-    width: 70px; height: 70px;
-    object-fit: contain;
-    filter: drop-shadow(0 0 8px rgba(201,168,76,0.3));
-  }
-  .guild-coat-fallback {
-    font-family: 'Cinzel', serif;
-    font-size: 2.5rem;
-    color: var(--gold);
-    font-weight: 900;
-  }
-
-  h1 {
-    font-family: 'Cinzel', serif;
-    font-size: clamp(2.2rem, 6vw, 4rem);
-    font-weight: 900;
-    color: var(--gold-light);
-    letter-spacing: 0.05em;
-    text-shadow: 0 2px 20px rgba(201,168,76,0.2);
-    line-height: 1.1;
-    margin-bottom: 0.5rem;
-  }
-
-  .guild-tagline {
-    font-family: 'Cinzel', serif;
-    font-size: 0.75rem;
-    letter-spacing: 0.4em;
-    color: var(--gold-dim);
-    text-transform: uppercase;
-    margin-bottom: 1.5rem;
-  }
-
-  .alliance-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--stone-light);
-    border: 1px solid var(--stone-border);
-    border-radius: 4px;
-    padding: 0.4rem 1rem;
-    font-size: 0.85rem;
-    color: var(--parchment-dim);
-  }
-  .alliance-badge strong { color: var(--parchment); font-style: italic; }
-
-  /* ── NAV ── */
-  nav {
-    position: sticky;
-    top: 0;
-    background: rgba(26,22,16,0.95);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--stone-border);
-    z-index: 100;
-    padding: 0 2rem;
-  }
-  nav ul {
-    display: flex;
-    list-style: none;
-    justify-content: center;
-    gap: 0;
-    max-width: 800px;
-    margin: 0 auto;
-  }
-  nav a {
-    display: block;
-    padding: 1rem 1.5rem;
-    color: var(--text-dim);
-    text-decoration: none;
-    font-family: 'Cinzel', serif;
-    font-size: 0.75rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    transition: color 0.2s;
-    border-bottom: 2px solid transparent;
-  }
-  nav a:hover { color: var(--gold); border-bottom-color: var(--gold-dim); }
-
-  /* ── SECTIONS ── */
-  section {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 4rem 2rem;
-  }
-  section + section {
-    border-top: 1px solid var(--stone-border);
-  }
-
-  .section-title {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    margin-bottom: 3rem;
-  }
-  .section-title h2 {
-    font-family: 'Cinzel', serif;
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: var(--gold);
-    letter-spacing: 0.1em;
-    white-space: nowrap;
-  }
-  .section-title-line {
-    height: 1px;
-    flex: 1;
-    background: linear-gradient(90deg, var(--stone-border), transparent);
-  }
-
-  /* ── STATS GRID ── */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 1px;
-    background: var(--stone-border);
-    border: 1px solid var(--stone-border);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .stat-card {
-    background: var(--stone-mid);
-    padding: 2rem 1.5rem;
-    text-align: center;
-    transition: background 0.2s;
-  }
-  .stat-card:hover { background: var(--stone-light); }
-  .stat-value {
-    font-family: 'Cinzel', serif;
-    font-size: 2.2rem;
-    font-weight: 900;
-    color: var(--gold-light);
-    line-height: 1;
-    margin-bottom: 0.5rem;
-  }
-  .stat-label {
-    font-size: 0.75rem;
-    letter-spacing: 0.3em;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    font-family: 'Cinzel', serif;
-  }
-
-  /* ── FOUNDER / INFO ── */
-  .info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-  }
-  .info-card {
-    background: var(--stone-mid);
-    border: 1px solid var(--stone-border);
-    border-radius: 6px;
-    padding: 1.5rem 2rem;
-  }
-  .info-card-label {
-    font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.35em;
-    color: var(--gold-dim);
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-  }
-  .info-card-value {
-    font-size: 1.15rem;
-    color: var(--parchment);
-  }
-  .info-card-value.founder {
-    font-style: italic;
-    font-size: 1.3rem;
-    color: var(--gold-light);
-  }
-
-  /* ── MEMBERS TABLE ── */
-  .members-controls {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .search-box {
-    flex: 1;
-    min-width: 200px;
-    background: var(--stone-mid);
-    border: 1px solid var(--stone-border);
-    border-radius: 4px;
-    padding: 0.6rem 1rem;
-    color: var(--text);
-    font-family: 'Crimson Text', serif;
-    font-size: 1rem;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .search-box::placeholder { color: var(--text-dim); }
-  .search-box:focus { border-color: var(--gold-dim); }
-
-  .sort-btn {
-    background: var(--stone-mid);
-    border: 1px solid var(--stone-border);
-    border-radius: 4px;
-    padding: 0.6rem 1.2rem;
-    color: var(--text-dim);
-    font-family: 'Cinzel', serif;
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .sort-btn:hover, .sort-btn.active { border-color: var(--gold-dim); color: var(--gold); }
-
-  .members-count {
-    font-family: 'Cinzel', serif;
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    letter-spacing: 0.2em;
-    margin-left: auto;
-  }
-
-  .members-table-wrap {
-    overflow-x: auto;
-    border: 1px solid var(--stone-border);
-    border-radius: 6px;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-  }
-  thead tr {
-    background: var(--stone-light);
-    border-bottom: 1px solid var(--stone-border);
-  }
-  th {
-    padding: 1rem 1.25rem;
-    text-align: left;
-    font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.3em;
-    color: var(--gold-dim);
-    text-transform: uppercase;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  th:hover { color: var(--gold); }
-  th .sort-arrow { margin-left: 4px; opacity: 0.4; }
-  th.sorted .sort-arrow { opacity: 1; color: var(--gold); }
-
-  tbody tr {
-    border-bottom: 1px solid rgba(61,50,32,0.5);
-    transition: background 0.15s;
-  }
-  tbody tr:last-child { border-bottom: none; }
-  tbody tr:hover { background: var(--stone-light); }
-  td {
-    padding: 0.85rem 1.25rem;
-    color: var(--text);
-  }
-  td.name { color: var(--parchment); font-size: 1rem; }
-  td.guild-rank {
-    font-family: 'Cinzel', serif;
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    color: var(--gold-dim);
-    text-transform: uppercase;
-  }
-  td.fame {
-    font-family: 'Cinzel', serif;
-    color: var(--gold-light);
-    font-size: 0.95rem;
-  }
-  td.joined { color: var(--text-dim); font-size: 0.9rem; }
-
-  .rank-badge {
-    display: inline-block;
-    padding: 0.15rem 0.6rem;
-    border-radius: 3px;
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    font-family: 'Cinzel', serif;
-  }
-  .rank-5 { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
-  .rank-4 { background: rgba(139,26,26,0.2); color: #D05050; border: 1px solid rgba(139,26,26,0.3); }
-  .rank-3 { background: rgba(50,41,30,0.8); color: #9A8E78; border: 1px solid var(--stone-border); }
-  .rank-2 { background: rgba(37,32,24,0.8); color: #6A6050; border: 1px solid rgba(61,50,32,0.4); }
-  .rank-1 { background: rgba(26,22,16,0.8); color: #4A4030; border: 1px solid rgba(61,50,32,0.3); }
-
-  .no-results {
-    text-align: center;
-    padding: 3rem;
-    color: var(--text-dim);
-    font-style: italic;
-  }
-
-  /* ── FOOTER ── */
-  footer {
-    text-align: center;
-    padding: 3rem 2rem;
-    border-top: 1px solid var(--stone-border);
-    color: var(--text-dim);
-    font-size: 0.85rem;
-  }
-  footer .ornament { margin-bottom: 1rem; }
-  .powered {
-    font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.3em;
-    color: rgba(138,122,96,0.5);
-    text-transform: uppercase;
-    margin-top: 0.5rem;
-  }
-
-  @media (max-width: 600px) {
-    nav ul { gap: 0; }
-    nav a { padding: 0.8rem 0.8rem; font-size: 0.65rem; }
-    .stat-value { font-size: 1.6rem; }
-    td { padding: 0.7rem 0.8rem; font-size: 0.85rem; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knights of Albion - Guild Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        amber: {
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        gray: {
+                            800: '#1f2937',
+                            900: '#111827',
+                            950: '#030712',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030712;
+            color: #e5e7eb;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; 
+        }
+        /* Loading animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .animate-pulse-fast {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        /* Pattern background */
+        .bg-pattern {
+            background-image: url('data:image/svg+xml,%3Csvg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%231f2937" fill-opacity="0.4" fill-rule="evenodd"%3E%3Ccircle cx="3" cy="3" r="3"/%3E%3Ccircle cx="13" cy="13" r="3"/%3E%3C/g%3E%3C/svg%3E');
+        }
+    </style>
 </head>
-<body>
+<body class="selection:bg-amber-500/30 min-h-screen flex flex-col">
 
-<div id="loading">
-  <div class="loading-crest"></div>
-  <p class="loading-text">Summoning guild records...</p>
-</div>
-
-<div id="error">
-  <h2>Guild Records Unavailable</h2>
-  <p id="error-msg">The Albion Online API could not be reached. This may be due to CORS restrictions — try opening this file from a local server.</p>
-  <p style="margin-top:1rem; font-size:0.85rem; color:var(--gold-dim);">Guild ID: AIbIw4erSVyHg9Ab6LVtdA</p>
-</div>
-
-<div id="main">
-  <header>
-    <div class="ornament">
-      <div class="ornament-line"></div>
-      <div class="ornament-diamond"></div>
-      <div class="ornament-line"></div>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950 text-amber-500 transition-opacity duration-500">
+        <div class="flex flex-col items-center gap-4">
+            <i class="fa-solid fa-shield-halved text-5xl animate-pulse-fast"></i>
+            <p class="text-xl font-semibold tracking-widest uppercase">Loading Guild Data...</p>
+        </div>
     </div>
-    <div class="guild-coat">
-      <div class="guild-coat-fallback" id="coat-fallback">⚔</div>
+
+    <!-- Main App Container -->
+    <div id="app-content" class="opacity-0 transition-opacity duration-500 flex-grow">
+        
+        <!-- API Connection Status Panel (Collapsible Drawer) -->
+        <div id="api-settings-panel" class="bg-gray-900 border-b border-gray-800 text-xs py-3 px-6 transition-all duration-300">
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3 flex-wrap justify-center">
+                    <span class="font-bold text-gray-400 uppercase tracking-wider">CORS Bypass Proxy:</span>
+                    <span id="api-status-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800">Checking API...</span>
+                    <span id="api-source-label" class="text-gray-400 italic">Attempting connection...</span>
+                </div>
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <span class="text-gray-400 whitespace-nowrap">Proxy URL:</span>
+                    <input type="text" id="proxy-url-input" class="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-amber-500 text-xs w-full md:w-64" placeholder="/api/guild/ or public proxy">
+                    <button id="apply-proxy-btn" class="bg-amber-600 hover:bg-amber-500 text-gray-950 font-bold px-3 py-1 rounded transition-colors whitespace-nowrap">Apply</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Header Section -->
+        <header class="relative border-b border-gray-800 bg-gray-900/50 overflow-hidden">
+            <div class="absolute inset-0 bg-pattern opacity-20"></div>
+            <div class="absolute top-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-600 to-transparent"></div>
+            
+            <div class="max-w-6xl mx-auto px-6 py-12 md:py-16 relative z-10">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
+                    <div class="flex flex-col md:flex-row items-center gap-6">
+                        <div class="w-24 h-24 bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-amber-600/50 rounded-xl shadow-[0_0_15px_rgba(217,119,6,0.3)] flex items-center justify-center rotate-3 transform transition-transform hover:rotate-0">
+                            <i class="fa-solid fa-shield-halved text-4xl text-amber-500"></i>
+                        </div>
+                        <div>
+                            <span id="mock-data-warning" class="hidden text-xs font-bold px-2 py-1 bg-red-900/50 text-red-400 rounded border border-red-800/50 mb-2 inline-block">
+                                Preview Mode (Mock Data)
+                            </span>
+                            <h1 class="text-3xl md:text-5xl font-extrabold text-white tracking-tight flex items-center justify-center md:justify-start gap-3 flex-wrap">
+                                <span id="guild-tag" class="text-amber-500 hidden">[]</span>
+                                <span id="guild-name">Loading...</span>
+                            </h1>
+                            <p class="text-gray-400 mt-2 flex items-center justify-center md:justify-start gap-2 text-lg">
+                                <i class="fa-solid fa-crown text-amber-600"></i>
+                                Founded by <strong id="guild-founder" class="text-gray-200">...</strong>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-4 w-full md:w-auto justify-center">
+                        <button class="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-gray-950 font-bold rounded-lg transition-colors shadow-lg shadow-amber-600/20 w-full md:w-auto">
+                            Apply to Guild
+                        </button>
+                        <button class="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg border border-gray-700 transition-colors w-full md:w-auto">
+                            Discord
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-6xl mx-auto px-6 py-12 w-full">
+            
+            <!-- Statistics Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                
+                <!-- Kill Fame -->
+                <div class="relative p-6 rounded-xl bg-gray-800/80 border border-gray-700 shadow-lg shadow-gray-900/50 overflow-hidden group hover:border-gray-600 transition-colors">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-bl-full blur-2xl"></div>
+                    <div class="flex items-start justify-between mb-4 relative z-10">
+                        <div class="p-2 bg-gray-950 rounded-lg border border-gray-800">
+                            <i class="fa-solid fa-khanda text-xl text-green-500"></i>
+                        </div>
+                    </div>
+                    <div class="relative z-10">
+                        <p class="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Kill Fame</p>
+                        <p id="stat-kill-fame" class="text-3xl font-bold text-white tracking-tight">...</p>
+                    </div>
+                </div>
+
+                <!-- Death Fame -->
+                <div class="relative p-6 rounded-xl bg-gray-900/50 border border-gray-800 overflow-hidden group hover:border-gray-600 transition-colors">
+                    <div class="flex items-start justify-between mb-4 relative z-10">
+                        <div class="p-2 bg-gray-950 rounded-lg border border-gray-800">
+                            <i class="fa-solid fa-skull text-xl text-red-500"></i>
+                        </div>
+                    </div>
+                    <div class="relative z-10">
+                        <p class="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Death Fame</p>
+                        <p id="stat-death-fame" class="text-3xl font-bold text-white tracking-tight">...</p>
+                    </div>
+                </div>
+
+                <!-- Active Members -->
+                <div class="relative p-6 rounded-xl bg-gray-900/50 border border-gray-800 overflow-hidden group hover:border-gray-600 transition-colors">
+                    <div class="flex items-start justify-between mb-4 relative z-10">
+                        <div class="p-2 bg-gray-950 rounded-lg border border-gray-800">
+                            <i class="fa-solid fa-users text-xl text-blue-400"></i>
+                        </div>
+                    </div>
+                    <div class="relative z-10">
+                        <p class="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Active Members</p>
+                        <p id="stat-members" class="text-3xl font-bold text-white tracking-tight">...</p>
+                    </div>
+                </div>
+
+                <!-- Founded Date -->
+                <div class="relative p-6 rounded-xl bg-gray-900/50 border border-gray-800 overflow-hidden group hover:border-gray-600 transition-colors">
+                    <div class="flex items-start justify-between mb-4 relative z-10">
+                        <div class="p-2 bg-gray-950 rounded-lg border border-gray-800">
+                            <i class="fa-solid fa-calendar text-xl text-purple-400"></i>
+                        </div>
+                    </div>
+                    <div class="relative z-10">
+                        <p class="text-gray-400 text-sm font-medium uppercase tracking-wider mb-1">Founded</p>
+                        <p id="stat-founded" class="text-xl font-bold text-white tracking-tight mt-2">...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Placeholder Sections for Future API endpoints -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Recent Activity / Killboard Placeholder -->
+                <div class="lg:col-span-2 space-y-6">
+                    <h2 class="text-2xl font-bold text-white border-b border-gray-800 pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-amber-500"></i>
+                        Recent Battles (Placeholder)
+                    </h2>
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                        <p class="text-gray-400 mb-6 text-sm">
+                            This section can be wired up to the <code>/events</code> API endpoint filtered by the guild ID to show recent kills and deaths.
+                        </p>
+                        
+                        <div id="recent-activity-container" class="space-y-4">
+                            <!-- Placeholder items injected via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Members Placeholder -->
+                <div class="space-y-6">
+                    <h2 class="text-2xl font-bold text-white border-b border-gray-800 pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-amber-500"></i>
+                        Top Members (Placeholder)
+                    </h2>
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                        <p class="text-gray-400 mb-6 text-sm">
+                            Can be connected to <code>/guilds/{GUILD_ID}/members</code> to rank top fame earners.
+                        </p>
+                        
+                        <div id="top-members-container" class="space-y-3">
+                             <!-- Placeholder items injected via JS -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="border-t border-gray-800 bg-gray-950 py-8 mt-auto">
+            <div class="max-w-6xl mx-auto px-6 text-center text-gray-500 text-sm flex flex-col items-center gap-2">
+                <i class="fa-solid fa-shield-halved text-2xl text-gray-800 mb-2"></i>
+                <p>Not affiliated with Sandbox Interactive GmbH.</p>
+                <p>Data provided by the official Albion Online API.</p>
+            </div>
+        </footer>
     </div>
-    <p class="guild-tagline" id="guild-tagline">Albion Online · Guild</p>
-    <h1 id="guild-name">Loading...</h1>
-    <div id="alliance-wrap" style="margin-top:1.2rem; display:none;">
-      <span class="alliance-badge">Alliance: <strong id="alliance-name"></strong></span>
-    </div>
-  </header>
 
-  <nav>
-    <ul>
-      <li><a href="#overview">Overview</a></li>
-      <li><a href="#info">Details</a></li>
-      <li><a href="#members">Members</a></li>
-    </ul>
-  </nav>
+    <script>
+        const GUILD_ID = 'AIbIw4erSVyHg9Ab6LVtdA';
+        const DIRECT_API_URL = `https://gameinfo.albiononline.com/api/gameinfo/guilds/${GUILD_ID}`;
+        
+        // Default to attempting to hit your serverless API route first.
+        // If not running on Vercel yet, it will fail and fall back to a public CORS helper.
+        const defaultProxyPath = `/api/guild/${GUILD_ID}`;
+        const publicCorsBypassUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(DIRECT_API_URL)}`;
 
-  <section id="overview">
-    <div class="section-title">
-      <h2>Guild Overview</h2>
-      <div class="section-title-line"></div>
-    </div>
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-value" id="stat-members">—</div>
-        <div class="stat-label">Members</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-fame">—</div>
-        <div class="stat-label">Total Fame</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-kills">—</div>
-        <div class="stat-label">Kills</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-deaths">—</div>
-        <div class="stat-label">Deaths</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-kd">—</div>
-        <div class="stat-label">K/D Ratio</div>
-      </div>
-    </div>
-  </section>
+        // Load configuration from localStorage if user previously customized it
+        let configuredProxy = localStorage.getItem('albion_custom_proxy') || defaultProxyPath;
+        document.getElementById('proxy-url-input').value = configuredProxy;
 
-  <section id="info">
-    <div class="section-title">
-      <h2>Guild Details</h2>
-      <div class="section-title-line"></div>
-    </div>
-    <div class="info-grid">
-      <div class="info-card">
-        <div class="info-card-label">Guild Master</div>
-        <div class="info-card-value founder" id="info-founder">—</div>
-      </div>
-      <div class="info-card">
-        <div class="info-card-label">Founded</div>
-        <div class="info-card-value" id="info-founded">—</div>
-      </div>
-      <div class="info-card">
-        <div class="info-card-label">Alliance</div>
-        <div class="info-card-value" id="info-alliance">—</div>
-      </div>
-      <div class="info-card">
-        <div class="info-card-label">Guild ID</div>
-        <div class="info-card-value" style="font-size:0.85rem; color:var(--text-dim); word-break:break-all;" id="info-id">—</div>
-      </div>
-    </div>
-  </section>
+        // Utility function to format large numbers
+        const formatNumber = (num) => {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+            return num?.toLocaleString() || '0';
+        };
 
-  <section id="members">
-    <div class="section-title">
-      <h2>Members</h2>
-      <div class="section-title-line"></div>
-    </div>
-    <div class="members-controls">
-      <input type="text" class="search-box" id="member-search" placeholder="Search by name...">
-      <span class="members-count" id="members-count"></span>
-    </div>
-    <div class="members-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th onclick="sortTable('name')" id="th-name">#&nbsp;&nbsp;Name <span class="sort-arrow">↕</span></th>
-            <th onclick="sortTable('guildRank')" id="th-guildRank">Rank <span class="sort-arrow">↕</span></th>
-            <th onclick="sortTable('killFame')" id="th-killFame">Kill Fame <span class="sort-arrow">↕</span></th>
-            <th onclick="sortTable('deathFame')" id="th-deathFame">Death Fame <span class="sort-arrow">↕</span></th>
-            <th onclick="sortTable('joinedAt')" id="th-joinedAt">Joined <span class="sort-arrow">↕</span></th>
-          </tr>
-        </thead>
-        <tbody id="members-tbody"></tbody>
-      </table>
-    </div>
-  </section>
+        // Utility function to format dates
+        const formatDate = (dateString) => {
+            if (!dateString) return 'Unknown';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        };
 
-  <footer>
-    <div class="ornament">
-      <div class="ornament-line" style="width:60px"></div>
-      <div class="ornament-diamond"></div>
-      <div class="ornament-line" style="width:60px"></div>
-    </div>
-    <p id="footer-guild">Guild</p>
-    <p class="powered">Data sourced from Albion Online API · Built for glory</p>
-  </footer>
-</div>
+        // Function to update the DOM with fetched data
+        const updateUI = (data, isMock) => {
+            // Show warning if using mock data (due to complete CORS block)
+            if (isMock) {
+                document.getElementById('mock-data-warning').classList.remove('hidden');
+            } else {
+                document.getElementById('mock-data-warning').classList.add('hidden');
+            }
 
-<script>
-const GUILD_ID = 'AIbIw4erSVyHg9Ab6LVtdA';
-const API_BASE = 'https://gameinfo.albiononline.com/api/gameinfo';
+            // Update Header Info
+            document.getElementById('guild-name').textContent = data.Name || 'Unknown Guild';
+            
+            if (data.AllianceTag) {
+                const tagEl = document.getElementById('guild-tag');
+                tagEl.textContent = `[${data.AllianceTag}]`;
+                tagEl.classList.remove('hidden');
+            } else {
+                document.getElementById('guild-tag').classList.add('hidden');
+            }
 
-let allMembers = [];
-let sortKey = 'killFame';
-let sortDir = -1;
+            document.getElementById('guild-founder').textContent = data.FounderName || 'Unknown';
 
-function fmt(n) {
-  if (n == null || n === 0) return '0';
-  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
-  return String(n);
-}
+            // Update Statistics
+            document.getElementById('stat-kill-fame').textContent = formatNumber(data.KillFame);
+            document.getElementById('stat-death-fame').textContent = formatNumber(data.DeathFame);
+            document.getElementById('stat-members').textContent = data.MemberCount || '0';
+            document.getElementById('stat-founded').textContent = formatDate(data.Founded);
+        };
 
-function fmtDate(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  return dt.toLocaleDateString('en-GB', { year:'numeric', month:'short', day:'numeric' });
-}
+        // Function to generate placeholder content for lists
+        const generatePlaceholders = () => {
+            const activityContainer = document.getElementById('recent-activity-container');
+            let activityHTML = '';
+            for(let i=1; i<=3; i++) {
+                activityHTML += `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-950 rounded-lg border border-gray-800/50 hover:border-gray-700 transition-colors gap-4 sm:gap-0">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-red-950 flex items-center justify-center border border-red-900 shrink-0">
+                                <i class="fa-solid fa-khanda text-red-500"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-200">Defeated <span class="text-gray-400 font-normal">EnemyPlayer${i}</span></p>
+                                <p class="text-xs text-gray-500">${i * 2} hours ago in Black Zone</p>
+                            </div>
+                        </div>
+                        <div class="text-left sm:text-right pl-14 sm:pl-0">
+                            <p class="text-green-500 font-bold">+${formatNumber(150000 * i)} Fame</p>
+                        </div>
+                    </div>
+                `;
+            }
+            activityContainer.innerHTML = activityHTML;
 
-const RANK_NAMES = {5:'Guild Master',4:'Officer',3:'Member',2:'Initiate',1:'Recruit'};
-function rankName(r) { return RANK_NAMES[r] || ('Rank ' + r); }
-function rankClass(r) { return 'rank-' + Math.min(5, Math.max(1, r||1)); }
+            const membersContainer = document.getElementById('top-members-container');
+            const mockMembers = [
+                { name: "SirLancelot", role: "Right Hand", fame: 85000000 },
+                { name: "MerlinTheMage", role: "Officer", fame: 72000000 },
+                { name: "Gawain", role: "Member", fame: 45000000 },
+                { name: "Percival", role: "Member", fame: 38000000 },
+                { name: "Bors", role: "Member", fame: 21000000 }
+            ];
+            
+            let membersHTML = '';
+            mockMembers.forEach((member, idx) => {
+                let rankColor = 'text-gray-600';
+                if (idx === 0) rankColor = 'text-amber-500';
+                else if (idx === 1) rankColor = 'text-gray-300';
+                else if (idx === 2) rankColor = 'text-amber-700';
 
-async function fetchGuild() {
-  const res = await fetch(`${API_BASE}/guilds/${GUILD_ID}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
+                membersHTML += `
+                    <div class="flex items-center justify-between p-3 bg-gray-950 rounded-lg border border-gray-800/30">
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold w-5 ${rankColor}">#${idx + 1}</span>
+                            <div>
+                                <p class="font-medium text-gray-200 text-sm">${member.name}</p>
+                                <p class="text-xs text-gray-500">${member.role}</p>
+                            </div>
+                        </div>
+                        <p class="text-sm font-semibold text-gray-300">${formatNumber(member.fame)}</p>
+                    </div>
+                `;
+            });
+            membersContainer.innerHTML = membersHTML;
+        };
 
-async function fetchMembers() {
-  const res = await fetch(`${API_BASE}/guilds/${GUILD_ID}/members`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
+        // UI Feedback Helpers for Proxy Settings
+        const updateStatusBadge = (status, text, sourceLabel) => {
+            const badge = document.getElementById('api-status-badge');
+            const label = document.getElementById('api-source-label');
+            
+            badge.textContent = text;
+            label.textContent = sourceLabel;
 
-async function fetchStats() {
-  try {
-    const res = await fetch(`${API_BASE}/guilds/${GUILD_ID}/topplayers`);
-    if (!res.ok) return null;
-    return res.json();
-  } catch { return null; }
-}
+            badge.className = "px-2 py-0.5 rounded text-[10px] font-bold border " + 
+                (status === 'success' ? "bg-green-950 text-green-400 border-green-800" : 
+                 status === 'warning' ? "bg-amber-950 text-amber-400 border-amber-800" : 
+                 "bg-red-950 text-red-400 border-red-800");
+        };
 
-function populateGuild(g) {
-  document.title = (g.Name || 'Guild') + ' — Albion Online';
-  document.getElementById('guild-name').textContent = g.Name || '—';
-  document.getElementById('footer-guild').textContent = g.Name || 'Guild';
-  document.getElementById('guild-tagline').textContent =
-    (g.AllianceName ? g.AllianceName + ' · ' : '') + 'Albion Online · Guild';
-  document.getElementById('info-id').textContent = g.Id || GUILD_ID;
+        // Main function to fetch data and initialize
+        const init = async () => {
+            const loadingScreen = document.getElementById('loading-screen');
+            const appContent = document.getElementById('app-content');
+            
+            // Add a brief delay for standard aesthetic loading screen
+            await new Promise(resolve => setTimeout(resolve, 600));
 
-  if (g.AllianceName) {
-    document.getElementById('alliance-wrap').style.display = 'block';
-    document.getElementById('alliance-name').textContent = g.AllianceName;
-    document.getElementById('info-alliance').textContent = g.AllianceName;
-  } else {
-    document.getElementById('info-alliance').textContent = 'No Alliance';
-  }
+            let success = false;
+            let fetchedData = null;
 
-  const founder = g.FounderId ? (g.FounderId) : '—';
-  document.getElementById('info-founder').textContent = g.GuildMaster || founder;
+            // Step 1: Attempt to use the configured Proxy (e.g. Serverless Route /api/guild/[id])
+            try {
+                const response = await fetch(configuredProxy);
+                if (response.ok) {
+                    fetchedData = await response.json();
+                    success = true;
+                    updateStatusBadge('success', 'PROXY ACTIVE', 'Loaded via your Serverless backend proxy.');
+                }
+            } catch (err) {
+                console.warn("Primary Proxy configured route failed, attempting public CORS bypass route...", err);
+            }
 
-  const created = g.founded || g.Founded || g.createdAt || g.CreatedAt;
-  document.getElementById('info-founded').textContent = fmtDate(created);
+            // Step 2: Fallback to AllOrigins Public CORS Bypasser if standard proxy failed (great for static previews)
+            if (!success) {
+                try {
+                    const response = await fetch(publicCorsBypassUrl);
+                    if (response.ok) {
+                        fetchedData = await response.json();
+                        success = true;
+                        updateStatusBadge('warning', 'PUBLIC CORS BYPASS', 'Loaded via AllOrigins Proxy helper.');
+                    }
+                } catch (err) {
+                    console.warn("Public CORS Bypass failed. Reverting to static mock content.", err);
+                }
+            }
 
-  const initials = (g.Name||'G').replace(/[^A-Z]/g,'').slice(0,2) || (g.Name||'G').slice(0,2).toUpperCase();
-  document.getElementById('coat-fallback').textContent = initials || '⚔';
+            // Step 3: Parse and present findings or default to highly detailed Mock Data
+            if (success && fetchedData && fetchedData.Name) {
+                updateUI(fetchedData, false);
+            } else {
+                updateStatusBadge('danger', 'MOCK FALLBACK', 'CORS restriction active. Loaded placeholder details.');
+                
+                // Detailed backup representation structure from game API
+                const mockGuildData = {
+                    Name: "Knights of Albion",
+                    AllianceTag: "EPIC",
+                    FounderName: "KingArthur",
+                    Founded: "2021-05-14T12:00:00Z",
+                    KillFame: 452890123,
+                    DeathFame: 120567890,
+                    MemberCount: 142
+                };
+                updateUI(mockGuildData, true);
+            }
 
-  if (g.GuildLogoUrl) {
-    const img = document.createElement('img');
-    img.src = g.GuildLogoUrl;
-    img.alt = g.Name + ' logo';
-    img.onerror = () => {};
-    document.querySelector('.guild-coat').appendChild(img);
-  }
-}
+            generatePlaceholders();
+            
+            // Turn off loading barrier
+            loadingScreen.classList.add('opacity-0');
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                appContent.classList.remove('opacity-0');
+            }, 500);
+        };
 
-function populateStats(members) {
-  const totalKill = members.reduce((a,m) => a + (m.KillFame||0), 0);
-  const totalDeath = members.reduce((a,m) => a + (m.DeathFame||0), 0);
-  const kills = members.reduce((a,m) => a + (m.LifetimeStatistics?.PvE?.Kills||0), 0);
-  const deaths = members.reduce((a,m) => a + (m.LifetimeStatistics?.PvP?.Deaths||0), 0);
+        // Event listener to allow users to save/apply custom Proxy routes manually
+        document.getElementById('apply-proxy-btn').addEventListener('click', () => {
+            const inputVal = document.getElementById('proxy-url-input').value.trim();
+            if (inputVal) {
+                localStorage.setItem('albion_custom_proxy', inputVal);
+                configuredProxy = inputVal;
+                
+                // Show loader and restart fetch
+                const loadingScreen = document.getElementById('loading-screen');
+                loadingScreen.style.display = 'flex';
+                loadingScreen.classList.remove('opacity-0');
+                document.getElementById('app-content').classList.add('opacity-0');
+                
+                init();
+            }
+        });
 
-  document.getElementById('stat-members').textContent = members.length;
-  document.getElementById('stat-fame').textContent = fmt(totalKill);
-  document.getElementById('stat-kills').textContent = kills > 0 ? fmt(kills) : '—';
-  document.getElementById('stat-deaths').textContent = deaths > 0 ? fmt(deaths) : '—';
-  const kd = deaths > 0 ? (kills/deaths).toFixed(2) : (kills > 0 ? '∞' : '—');
-  document.getElementById('stat-kd').textContent = kd;
-}
-
-function renderMembers() {
-  const q = document.getElementById('member-search').value.trim().toLowerCase();
-  let list = allMembers.filter(m => !q || (m.Name||'').toLowerCase().includes(q));
-
-  list.sort((a,b) => {
-    let av = a[sortKey], bv = b[sortKey];
-    if (sortKey === 'name') { av = (av||'').toLowerCase(); bv = (bv||'').toLowerCase(); }
-    if (av == null) av = sortDir === 1 ? Infinity : -Infinity;
-    if (bv == null) bv = sortDir === 1 ? Infinity : -Infinity;
-    return sortDir * (av < bv ? -1 : av > bv ? 1 : 0);
-  });
-
-  document.getElementById('members-count').textContent =
-    list.length + ' of ' + allMembers.length + ' members';
-
-  const tbody = document.getElementById('members-tbody');
-  if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="no-results">No members found</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = list.map((m, i) => `
-    <tr>
-      <td class="name"><span style="color:var(--text-dim);margin-right:0.75rem;font-size:0.8rem;">${i+1}</span>${m.Name||'Unknown'}</td>
-      <td class="guild-rank"><span class="rank-badge ${rankClass(m.GuildRank)}">${rankName(m.GuildRank)}</span></td>
-      <td class="fame">${fmt(m.KillFame)}</td>
-      <td class="fame" style="color:var(--text-dim)">${fmt(m.DeathFame)}</td>
-      <td class="joined">${fmtDate(m.JoinedAt)}</td>
-    </tr>
-  `).join('');
-}
-
-function sortTable(key) {
-  if (sortKey === key) { sortDir *= -1; }
-  else { sortKey = key; sortDir = key === 'name' ? 1 : -1; }
-  document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
-  const th = document.getElementById('th-' + key);
-  if (th) {
-    th.classList.add('sorted');
-    th.querySelector('.sort-arrow').textContent = sortDir === 1 ? '↑' : '↓';
-  }
-  renderMembers();
-}
-
-document.getElementById('member-search').addEventListener('input', renderMembers);
-
-async function init() {
-  try {
-    const [guild, members] = await Promise.all([fetchGuild(), fetchMembers()]);
-    populateGuild(guild);
-
-    allMembers = members || [];
-    populateStats(allMembers);
-
-    // set initial sort indicator
-    const th = document.getElementById('th-killFame');
-    if (th) { th.classList.add('sorted'); th.querySelector('.sort-arrow').textContent = '↓'; }
-
-    renderMembers();
-
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('main').style.display = 'block';
-  } catch (err) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error').style.display = 'flex';
-    document.getElementById('error-msg').textContent =
-      'Could not reach the Albion Online API. This is likely a CORS issue when opening the file directly. ' +
-      'Try serving it via a local web server (e.g. python3 -m http.server), or deploy it online. ' +
-      'Error: ' + err.message;
-  }
-}
-
-init();
-</script>
+        // Start initialization when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
 </body>
 </html>
