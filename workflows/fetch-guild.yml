@@ -2,7 +2,7 @@ name: Fetch Albion Guild Data
 
 on:
   schedule:
-    - cron: '*/30' # Runs automatically every 30 minutes
+    - cron: '*/30 * * * *' # Corrected: Runs every 30 minutes, every day
   workflow_dispatch: # Allows you to click a button to update manually
 
 permissions:
