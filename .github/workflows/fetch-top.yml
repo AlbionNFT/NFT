@@ -14,25 +14,33 @@ jobs:
       - name: Checkout Repository Codebase
         uses: actions/checkout@v4
 
-      - name: Pull Weekly Top Outlands Data from Albion API
+      - name: Pull Weekly Top Outlands Data from Albion API (With Retries)
         run: |
-          # Variable Definitions
           API_URL="https://gameinfo.albiononline.com/api/gameinfo/guilds/AIbIw4erSVyHg9Ab6LVtdA/top?range=week&limit=10&offset=1&region=Outlands"
           
-          echo "Initiating data acquisition from Albion API node..."
-          
-          # Perform curl request with a 30-second timeout and custom User-Agent to prevent bot-blocking
-          curl -s -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
-               --max-time 30 \
-               "$API_URL" -o top-kills.json
+          # Try up to 3 times before throwing an error
+          for i in {1..3}; do
+            echo "Attempt $i: Initiating data acquisition from Albion API node..."
+            
+            # Perform curl request with an extended 45-second timeout and custom User-Agent
+            curl -s -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+                 --max-time 45 \
+                 "$API_URL" -o top-kills.json
 
-          # Quick validation block to verify that JSON was actually written and isn't blank
-          if [ -s top-kills.json ]; then
-            echo "Data payload mapped successfully."
-          else
-            echo "Warning: API returned an empty response or timed out."
-            exit 1
-          fi
+            # Validation block: Check if file exists, has size > 0, and doesn't contain a generic 500 error string
+            if [ -s top-kills.json ] && ! grep -q "Internal Server Error" top-kills.json; then
+              echo "Data payload mapped successfully on attempt $i."
+              break
+            fi
+            
+            if [ $i -lt 3 ]; then
+              echo "Attempt $i failed, timed out, or returned an error. Waiting 15 seconds to retry..."
+              sleep 15
+            else
+              echo "Critical Error: Albion API failed to return a valid response after 3 attempts."
+              exit 1
+            fi
+          done
 
       - name: Securely Commit and Push Dataset back to GitHub Pages Branch
         run: |
