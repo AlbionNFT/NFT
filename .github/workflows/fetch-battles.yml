@@ -1,0 +1,48 @@
+name: Fetch Albion Battle Boards Data
+
+on:
+  schedule:
+    # Runs every 6 hours (At minute 0 past every 6th hour)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allows you to manually trigger the update from the Actions tab
+
+permissions:
+  contents: write # Grants write permissions to your repository to commit the data file
+
+jobs:
+  update-battle-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository Codebase
+        uses: actions/checkout@v4
+
+      - name: Fetch Recent Battle Logs from Albion API
+        run: |
+          echo "Initiating retrieval sequence from Albion Online API..."
+          curl -s -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+          "https://gameinfo.albiononline.com/api/gameinfo/battles?range=week&offset=0&limit=9999&sort=totalfame&guildId=AIbIw4erSVyHg9Ab6LVtdA" \
+          -o battle-data.json
+          
+          # Basic validation check to verify if the output is valid JSON
+          if jq '.' battle-data.json >/dev/null 2>&1; then
+            echo "Success: Dataset captured and verified as secure valid JSON format."
+          else
+            echo "Critical Error: Retrieved payload is malformed or blocked by cloudflare security walls."
+            exit 1
+          fi
+
+      - name: Commit and Push Updated Dataset
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Check if changes exist to avoid empty commit errors
+          if git status --porcelain | grep -q "battle-data.json"; then
+            git add battle-data.json
+            git commit -m "chore: automated refresh of outlands battleboard metrics [skip ci]"
+            git push origin main
+            echo "Database updated successfully across the cloud deployment vectors."
+          else
+            echo "No operational data shifts uncovered. Database state remains unchanged."
+          fi
