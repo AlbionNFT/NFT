@@ -46,11 +46,12 @@
                 <span class="text-xl font-bold tracking-wider text-amber-400 uppercase">NoFreeThinkers</span>
             </div>
             
-            <nav class="hidden md:flex space-x-8 text-sm font-medium tracking-wide">
+            <nav class="hidden md:flex space-x-6 lg:space-x-8 text-sm font-medium tracking-wide">
                 <a href="#" class="text-amber-400 border-b-2 border-amber-400 pb-1">Home</a>
                 <a href="#stats" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Guild Stats</a>
                 <a href="members.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Members</a>
                 <a href="Build.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Builds</a>
+                <a href="battleboards.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Battle Boards</a>
                 <a href="#community" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Community</a>
             </nav>
 
@@ -212,13 +213,13 @@
             const rawValue = parseFloat(num);
             
             if (rawValue >= 1e12) {
-                return (rawValue / 1e12).toFixed(2) + 'Trillions'; // Trillions
+                return (rawValue / 1e12).toFixed(2) + 'T'; // Trillions
             }
             if (rawValue >= 1e9) {
-                return (rawValue / 1e9).toFixed(2) + 'Billions';  // Billions
+                return (rawValue / 1e9).toFixed(2) + 'B';  // Billions
             }
             if (rawValue >= 1e6) {
-                return (rawValue / 1e6).toFixed(2) + 'Millions';  // Millions
+                return (rawValue / 1e6).toFixed(2) + 'M';  // Millions
             }
             return rawValue.toLocaleString(); // Fallback for small values
         }
