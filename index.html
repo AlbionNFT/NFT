@@ -48,21 +48,6 @@
             z-index: -1;
             filter: blur(40px);
         }
-        /* Custom scrollbar styling for the leaderboard container */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(251, 191, 36, 0.3);
-            border-radius: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(251, 191, 36, 0.5);
-        }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col font-sans selection:bg-amber-500 selection:text-black">
@@ -173,13 +158,13 @@
 
                     <div class="w-full">
                         <div class="grid grid-cols-12 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-900 pb-3 font-semibold px-4">
-                            <div class="col-span-2 text-center">Rank</div>
-                            <div class="col-span-4">Killer Name</div>
+                            <div class="col-span-1 text-center">Rank</div>
+                            <div class="col-span-5 pl-11">Killer Info</div>
                             <div class="col-span-3">Victim Name</div>
                             <div class="col-span-3 text-right">Kill Fame</div>
                         </div>
                         
-                        <div id="kills-leaderboard-container" class="divide-y divide-gray-900/50 max-h-[400px] overflow-y-auto custom-scrollbar mt-2">
+                        <div id="kills-leaderboard-container" class="divide-y divide-gray-900/50 mt-2">
                             <p class="text-center py-8 text-xs text-gray-500 tracking-wide italic">No high priority targets eliminated yet this week.</p>
                         </div>
                     </div>
@@ -266,6 +251,7 @@
         const localJsonUrl = `https://${githubUser}.github.io/${repoName}/guild-data.json?t=${Date.now()}`;
         const topKillsJsonUrl = `https://${githubUser}.github.io/${repoName}/top-kills.json?t=${Date.now()}`;
 
+        // Global card formatter function (keeps Trillions/Billions/Millions unchanged for macro cards)
         function formatCompactFame(num) {
             if (!num || isNaN(num)) return "0";
             const rawValue = parseFloat(num);
@@ -275,18 +261,51 @@
             return rawValue.toLocaleString();
         }
 
+        // Distinct compact conversion formatting matching MMORPG metrics inside the leaderboard table container
+        function formatLeaderboardFame(num) {
+            if (!num || isNaN(num)) return "0";
+            const rawValue = parseFloat(num);
+            if (rawValue >= 1e6) return (rawValue / 1e6).toFixed(2) + 'M';
+            if (rawValue >= 1e3) return (rawValue / 1e3).toFixed(1) + 'K';
+            return rawValue.toLocaleString();
+        }
+
         // Dedicated renderer engine for the Top Kills leaderboard rows
         function renderLeaderboard(killArray) {
             const container = document.getElementById('kills-leaderboard-container');
             if (!killArray || !killArray.length) return;
 
+            // Enforce automatic client-side sorting tracking the highest single value total kill fame executions
+            const sortedKills = [...killArray].sort((a, b) => {
+                const fameA = parseFloat(a.TotalKillFame || a.Killer?.KillFame || 0);
+                const fameB = parseFloat(b.TotalKillFame || b.Killer?.KillFame || 0);
+                return fameB - fameA;
+            });
+
             let htmlContent = '';
 
-            killArray.forEach((killEvent, index) => {
+            sortedKills.forEach((killEvent, index) => {
                 const position = index + 1;
-                const killerName = killEvent.Killer?.Name || "Unknown Killer";
+                
+                // 1. Unpacking Killer Core Information
+                const killer = killEvent.Killer || {};
+                const killerName = killer.Name || "Unknown Killer";
+                const rawIp = killer.AverageItemPower || 0;
+                const itemPower = Math.round(rawIp); // Clean up decimals (e.g., 1587)
+                
+                // 2. Dynamic Weapon Rendering via Albion Asset Api Pipeline
+                const mainHandItem = killer.Equipment?.MainHand?.Type || "";
+                let weaponIconUrl = "";
+                if (mainHandItem) {
+                    weaponIconUrl = `https://render.albiononline.com/v1/item/${mainHandItem}.png?size=40`;
+                }
+
+                // 3. Unpacking Victim Information
                 const victimName = killEvent.Victim?.Name || "Unknown Victim";
-                const calculatedFame = formatCompactFame(killEvent.TotalKillFame);
+                
+                // Safely checks alternative data fields to format the numerical layout value cleanly
+                const targetRawFame = killEvent.TotalKillFame || killer.KillFame || 0;
+                const calculatedFame = formatLeaderboardFame(targetRawFame);   
 
                 // Distinct rank icons for the podium spots
                 let placementVisual = `<span class="text-gray-500 font-mono text-sm font-bold">${position}</span>`;
@@ -294,10 +313,19 @@
                 if (position === 2) placementVisual = `<i class="fas fa-medal text-slate-300 text-sm"></i>`;
                 if (position === 3) placementVisual = `<i class="fas fa-medal text-amber-700 text-sm"></i>`;
 
+                // Generate the visual markup row inserting weapon img and IP tags
                 htmlContent += `
                     <div class="grid grid-cols-12 items-center py-3.5 px-4 hover:bg-gray-900/30 transition-colors duration-150 group">
-                        <div class="col-span-2 text-center">${placementVisual}</div>
-                        <div class="col-span-4 font-semibold text-gray-200 group-hover:text-amber-400 transition-colors truncate pr-2">${killerName}</div>
+                        <div class="col-span-1 text-center">${placementVisual}</div>
+                        
+                        <div class="col-span-5 flex items-center space-x-3 truncate pr-2">
+                            ${weaponIconUrl ? `<img src="${weaponIconUrl}" alt="weapon" class="w-8 h-8 rounded bg-gray-900 border border-gray-800 object-contain flex-shrink-0" onerror="this.style.display='none'">` : `<div class="w-8 h-8 bg-gray-900 border border-gray-800 rounded flex-shrink-0"></div>`}
+                            <div class="truncate">
+                                <p class="font-semibold text-gray-200 group-hover:text-amber-400 transition-colors truncate">${killerName}</p>
+                                <p class="text-[10px] text-gray-500 font-mono">${itemPower > 0 ? `⚡ ${itemPower} IP` : 'No IP Data'}</p>
+                            </div>
+                        </div>
+                        
                         <div class="col-span-3 text-gray-400 italic truncate pr-2">${victimName}</div>
                         <div class="col-span-3 text-right font-bold font-mono text-red-400">${calculatedFame}</div>
                     </div>
