@@ -318,7 +318,7 @@
                 const victimName = killEvent.Victim?.Name || "Unknown Victim";
                 
                 // Safely checks alternative data fields to format the numerical layout value cleanly
-                const targetRawFame = killEvent.TotalKillFame || killer.KillFame || 0;
+                const targetRawFame =  killEvent.Victim.TotalVictimKillFame || 0;
                 const calculatedFame = formatLeaderboardFame(targetRawFame);   
 
                 // Distinct rank icons for the podium spots
