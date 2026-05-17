@@ -36,6 +36,17 @@
             color: #fbbf24 !important;
             background: rgba(255, 255, 255, 0.02);
         }
+        /* Hide default scrollbar inside the dropdown check menus */
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(245, 158, 11, 0.3);
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col font-sans selection:bg-amber-500 selection:text-black pb-24">
@@ -94,12 +105,10 @@
             
             <div class="glass-panel p-4 rounded-xl border border-gray-900/40 bg-gray-900/10">
                 <span class="text-xs font-bold text-gray-500 uppercase block mb-2 tracking-wider"><i class="fas fa-link mr-1"></i> Consolidated Battle Logs Index:</span>
-                <div id="battle-ids-badges" class="flex flex-wrap gap-2">
-                    </div>
+                <div id="battle-ids-badges" class="flex flex-wrap gap-2"></div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                
                 <div class="glass-panel rounded-2xl overflow-hidden shadow-xl">
                     <div class="p-4 bg-gray-950/40 border-b border-gray-800/60 flex items-center justify-between">
                         <span class="text-xs font-black uppercase tracking-wider text-amber-400">Alliances Spectrum Summary</span>
@@ -115,8 +124,7 @@
                                     <th class="p-3 text-right">Total Kill Fame</th>
                                 </tr>
                             </thead>
-                            <tbody id="alliance-rows" class="divide-y divide-gray-900/40 text-gray-300">
-                                </tbody>
+                            <tbody id="alliance-rows" class="divide-y divide-gray-900/40 text-gray-300"></tbody>
                         </table>
                     </div>
                 </div>
@@ -137,42 +145,55 @@
                                     <th class="p-3 text-right">Total Kill Fame</th>
                                 </tr>
                             </thead>
-                            <tbody id="guild-rows" class="divide-y divide-gray-900/40 text-gray-300">
-                                </tbody>
+                            <tbody id="guild-rows" class="divide-y divide-gray-900/40 text-gray-300"></tbody>
                         </table>
                     </div>
                 </div>
-
             </div>
 
             <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl border border-gray-900/80">
                 <div class="p-5 bg-gray-900/30 border-b border-gray-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h3 class="text-sm font-bold text-white tracking-wide">Consolidated Combatant Manifesto</h3>
-                        <p class="text-[11px] text-gray-500 mt-0.5">Click headers to sort data. Type inside column header boxes to filter by group name.</p>
+                        <p class="text-[11px] text-gray-500 mt-0.5">Click headers to sort values. Click Guild or Alliance columns to toggle checkbox filtering.</p>
                     </div>
-                    <span id="player-count-badge" class="self-start sm:self-auto bg-gray-950 border border-gray-800 text-gray-400 text-[11px] px-2.5 py-1 rounded-md font-mono">
-                        0 Unique Players Tracked
-                    </span>
+                    <span id="player-count-badge" class="self-start sm:self-auto bg-gray-950 border border-gray-800 text-gray-400 text-[11px] px-2.5 py-1 rounded-md font-mono">0 Unique Players Tracked</span>
                 </div>
 
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto min-h-[350px]">
                     <table class="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                             <tr class="border-b border-gray-900 text-gray-400 text-xs font-bold uppercase tracking-wider bg-gray-900/20">
                                 <th class="p-4 min-w-[160px]">Combatant Character Name</th>
-                                <th class="p-4 min-w-[180px]">
-                                    <div class="flex flex-col gap-1.5">
+                                
+                                <th class="p-4 min-w-[180px] relative">
+                                    <div class="inline-flex items-center gap-1.5 cursor-pointer hover:text-amber-400 transition-colors" onclick="toggleDropdown('guild-dropdown', event)">
                                         <span>Guild Vector</span>
-                                        <input type="text" id="filter-guild" placeholder="Filter Guild..." class="w-full bg-gray-950 border border-gray-800 rounded px-2 py-1 text-[11px] text-amber-400 font-normal focus:outline-none focus:border-amber-500/50 placeholder:text-gray-700">
+                                        <i class="fas fa-chevron-down text-[10px]"></i>
+                                    </div>
+                                    <div id="guild-dropdown" class="hidden absolute top-12 left-4 z-30 w-56 glass-panel rounded-xl shadow-2xl bg-gray-950 p-3 flex flex-col space-y-2 max-h-60 overflow-y-auto custom-scroll border border-amber-500/20">
+                                        <div class="text-[10px] uppercase font-black tracking-widest text-gray-500 border-b border-gray-900 pb-1.5 flex justify-between items-center">
+                                            <span>Active Guilds</span>
+                                            <button onclick="clearFilterSelection('guild', event)" class="text-amber-500 hover:underline normal-case font-bold">Clear</button>
+                                        </div>
+                                        <div id="guild-checkbox-list" class="flex flex-col space-y-1.5 text-xs text-gray-300 font-medium"></div>
                                     </div>
                                 </th>
-                                <th class="p-4 min-w-[120px]">
-                                    <div class="flex flex-col gap-1.5">
+                                
+                                <th class="p-4 min-w-[140px] relative">
+                                    <div class="inline-flex items-center gap-1.5 cursor-pointer hover:text-amber-400 transition-colors" onclick="toggleDropdown('alliance-dropdown', event)">
                                         <span>Alliance</span>
-                                        <input type="text" id="filter-alliance" placeholder="Filter Tag..." class="w-full bg-gray-950 border border-gray-800 rounded px-2 py-1 text-[11px] text-amber-400 font-normal focus:outline-none focus:border-amber-500/50 placeholder:text-gray-700">
+                                        <i class="fas fa-chevron-down text-[10px]"></i>
+                                    </div>
+                                    <div id="alliance-dropdown" class="hidden absolute top-12 left-4 z-30 w-48 glass-panel rounded-xl shadow-2xl bg-gray-950 p-3 flex flex-col space-y-2 max-h-60 overflow-y-auto custom-scroll border border-amber-500/20">
+                                        <div class="text-[10px] uppercase font-black tracking-widest text-gray-500 border-b border-gray-900 pb-1.5 flex justify-between items-center">
+                                            <span>Active Tags</span>
+                                            <button onclick="clearFilterSelection('alliance', event)" class="text-amber-500 hover:underline normal-case font-bold">Clear</button>
+                                        </div>
+                                        <div id="alliance-checkbox-list" class="flex flex-col space-y-1.5 text-xs text-gray-300 font-medium"></div>
                                     </div>
                                 </th>
+
                                 <th class="p-4 text-center text-emerald-400 sortable transition-colors" onclick="toggleSort('kills')">
                                     <div class="flex items-center justify-center gap-1.5 py-2">
                                         <span>Total Kills</span>
@@ -193,8 +214,7 @@
                                 </th>
                             </tr>
                         </thead>
-                        <tbody id="player-rows" class="divide-y divide-gray-900/60 text-gray-300">
-                            </tbody>
+                        <tbody id="player-rows" class="divide-y divide-gray-900/60 text-gray-300"></tbody>
                     </table>
                 </div>
             </div>
@@ -204,12 +224,10 @@
         <div id="error-panel" class="hidden max-w-xl mx-auto glass-panel p-8 rounded-2xl border border-red-500/20 bg-red-950/5 text-center space-y-4">
             <div class="text-red-400 text-3xl"><i class="fas fa-database"></i></div>
             <h3 class="text-base font-bold text-white">Aggregation Stream Failure</h3>
-            <p id="error-message-text" class="text-xs text-gray-400 leading-relaxed">
-                The targeted multi-log analysis could not be parsed.
-            </p>
+            <p id="error-message-text" class="text-xs text-gray-400 leading-relaxed"></p>
             <div class="pt-2">
                 <a href="battleboards.html" class="inline-flex items-center bg-gray-900 hover:bg-gray-800 border border-gray-800 text-xs text-amber-400 font-bold px-4 py-2 rounded-xl transition-all">
-                    <i class="fas fa-arrow-left mr-2"></i> Return to Terminal Index
+                    <i class="fas fa-arrow-left mr-2"></i> Return to Index
                 </a>
             </div>
         </div>
@@ -217,12 +235,8 @@
 
     <footer class="glass-nav mt-auto w-full py-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 space-y-4 sm:space-y-0">
-            <div>
-                &copy; 2026 <span class="text-gray-400 font-medium">NoFreeThinkers</span>. Automated Operational Diagnostics Node.
-            </div>
-            <div class="text-right tracking-wide">
-                Summation Logic Engine <span class="text-amber-500/70 font-mono">UTC System Static</span>
-            </div>
+            <div>&copy; 2026 <span class="text-gray-400 font-medium">NoFreeThinkers</span>. Automated Operational Diagnostics Node.</div>
+            <div class="text-right tracking-wide">Summation Logic Engine <span class="text-amber-500/70 font-mono">UTC System Static</span></div>
         </div>
     </footer>
 
@@ -231,10 +245,13 @@
         const repoName = 'NFT'; 
         const localJsonUrl = `https://${githubUser}.github.io/${repoName}/battle-data.json?t=${Date.now()}`;
 
-        // Memory states to keep track of sorting and filtering options seamlessly
         let globalPlayersArray = [];
-        let activeSortColumn = 'fame'; // Defaults to sorting by Kill Fame top-to-bottom
+        let activeSortColumn = 'fame'; 
         let isDescending = true;
+
+        // Tracks which checkboxes are currently active
+        let selectedGuilds = new Set();
+        let selectedAlliances = new Set();
 
         function formatCompactFame(num) {
             if (!num || isNaN(num)) return "0";
@@ -252,10 +269,35 @@
             return idsRaw.split(',').map(id => id.trim()).filter(id => id !== "");
         }
 
+        // Toggle custom header dropdown boxes
+        function toggleDropdown(dropdownId, event) {
+            event.stopPropagation();
+            const element = document.getElementById(dropdownId);
+            const isHidden = element.classList.contains('hidden');
+            
+            // Close other custom dropdown structures first
+            document.getElementById('guild-dropdown').classList.add('hidden');
+            document.getElementById('alliance-dropdown').classList.add('hidden');
+
+            if (isHidden) {
+                element.classList.remove('hidden');
+            }
+        }
+
+        // Close selectors instantly if user clicks anywhere outside of them
+        window.addEventListener('click', () => {
+            document.getElementById('guild-dropdown').classList.add('hidden');
+            document.getElementById('alliance-dropdown').classList.add('hidden');
+        });
+
+        // Prevent closing dropdown when users click checkbox item slots
+        document.getElementById('guild-dropdown').addEventListener('click', (e) => e.stopPropagation());
+        document.getElementById('alliance-dropdown').addEventListener('click', (e) => e.stopPropagation());
+
         async function processMultiBattleAggregation() {
             const targetIds = getQueryBattleIds();
             if (targetIds.length === 0) {
-                renderErrorState("Operational fault: No multi-board tracking context IDs were passed down the data transmission vector.");
+                renderErrorState("Operational fault: No multi-board tracking context IDs specified.");
                 return;
             }
 
@@ -269,17 +311,16 @@
 
             try {
                 const res = await fetch(localJsonUrl);
-                if (!res.ok) throw new Error(`HTTP Matrix system data download breakdown status: ${res.status}`);
+                if (!res.ok) throw new Error(`HTTP data link error: ${res.status}`);
                 const battlesCacheArray = await res.json();
 
                 const targetedBattles = battlesCacheArray.filter(b => targetIds.includes(String(b.id)));
-                
                 if (targetedBattles.length === 0) {
-                    renderErrorState(`None of the selected battle indexes (${targetIds.join(', ')}) were discovered inside your current tracking file snapshot.`);
+                    renderErrorState(`None of the selected battle indexes (${targetIds.join(', ')}) discovered.`);
                     return;
                 }
 
-                document.getElementById('combined-status-text').innerText = `Consolidating telemetry datasets across ${targetedBattles.length} confirmed log logs.`;
+                document.getElementById('combined-status-text').innerText = `Consolidating telemetry datasets across ${targetedBattles.length} battles.`;
 
                 let allianceCombinedMap = {};
                 let guildCombinedMap = {};
@@ -316,11 +357,10 @@
                     });
                 });
 
-                // Assign to global state array variable memory footprint for sorting functions
                 globalPlayersArray = Object.values(playerCombinedMap);
                 document.getElementById('player-count-badge').innerText = `${globalPlayersArray.length} Unique Combatants Consolidated`;
 
-                // Render Top Alliance Rows
+                // Build Summary Tables UI elements
                 const allianceTbody = document.getElementById('alliance-rows');
                 Object.values(allianceCombinedMap).sort((a,b) => b.fame - a.fame).forEach(a => {
                     const row = document.createElement('tr');
@@ -334,7 +374,6 @@
                     allianceTbody.appendChild(row);
                 });
 
-                // Render Top Guild Rows
                 const guildTbody = document.getElementById('guild-rows');
                 Object.values(guildCombinedMap).sort((a,b) => b.fame - a.fame).forEach(g => {
                     const row = document.createElement('tr');
@@ -349,23 +388,70 @@
                     guildTbody.appendChild(row);
                 });
 
-                // Render main player database view with standard filters applied
-                renderPlayerTable();
+                // Dynamically extract involved factions to build filter options lists
+                populateFilterMenus(Object.keys(guildCombinedMap), Object.keys(allianceCombinedMap));
 
-                // Hook user inputs into our real-time processing listeners
-                document.getElementById('filter-guild').addEventListener('input', renderPlayerTable);
-                document.getElementById('filter-alliance').addEventListener('input', renderPlayerTable);
+                renderPlayerTable();
 
                 document.getElementById('detail-loading').classList.add('hidden');
                 document.getElementById('detail-content').classList.remove('hidden');
 
             } catch(err) {
-                console.error("Critical rendering cross-computation pipeline error:", err);
-                renderErrorState(`System file framework process exceptions breakdown failure: ${err.message}`);
+                console.error("Aggregation engine error:", err);
+                renderErrorState(`Parsing failure broken pipeline parameters: ${err.message}`);
             }
         }
 
-        // Handles the sorting logic updates and toggles font-awesome arrow directions
+        // Loops through involved names and places checkboxes into dropdown lists
+        function populateFilterMenus(guildsList, alliancesList) {
+            const guildContainer = document.getElementById('guild-checkbox-list');
+            const allianceContainer = document.getElementById('alliance-checkbox-list');
+
+            // Sort lists alphabetically for ease of reading
+            guildsList.sort().forEach(guildName => {
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-2 cursor-pointer hover:text-amber-400 py-0.5 select-none";
+                label.innerHTML = `
+                    <input type="checkbox" value="${guildName}" class="accent-amber-500 rounded border-gray-800 bg-gray-900 focus:ring-0">
+                    <span class="truncate">${guildName}</span>
+                `;
+                label.querySelector('input').addEventListener('change', function() {
+                    if (this.checked) selectedGuilds.add(guildName);
+                    else selectedGuilds.delete(guildName);
+                    renderPlayerTable();
+                });
+                guildContainer.appendChild(label);
+            });
+
+            alliancesList.sort().forEach(allianceTag => {
+                const displayName = allianceTag === 'NONE' ? '[No Alliance]' : allianceTag;
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-2 cursor-pointer hover:text-amber-400 py-0.5 select-none";
+                label.innerHTML = `
+                    <input type="checkbox" value="${allianceTag}" class="accent-amber-500 rounded border-gray-800 bg-gray-900 focus:ring-0">
+                    <span class="truncate">${displayName}</span>
+                `;
+                label.querySelector('input').addEventListener('change', function() {
+                    if (this.checked) selectedAlliances.add(allianceTag);
+                    else selectedAlliances.delete(allianceTag);
+                    renderPlayerTable();
+                });
+                allianceContainer.appendChild(label);
+            });
+        }
+
+        function clearFilterSelection(type, event) {
+            event.stopPropagation();
+            if (type === 'guild') {
+                selectedGuilds.clear();
+                document.querySelectorAll('#guild-checkbox-list input').forEach(cb => cb.checked = false);
+            } else {
+                selectedAlliances.clear();
+                document.querySelectorAll('#alliance-checkbox-list input').forEach(cb => cb.checked = false);
+            }
+            renderPlayerTable();
+        }
+
         function toggleSort(columnKey) {
             if (activeSortColumn === columnKey) {
                 isDescending = !isDescending; 
@@ -374,51 +460,39 @@
                 isDescending = true; 
             }
 
-            // Clean icon classes back to default
             ['kills', 'deaths', 'fame'].forEach(col => {
-                const icon = document.getElementById(`sort-icon-${col}`);
-                icon.className = "fas fa-sort text-[10px] text-gray-600";
+                document.getElementById(`sort-icon-${col}`).className = "fas fa-sort text-[10px] text-gray-600";
             });
 
-            // Set running state icon styles
             const targetedIcon = document.getElementById(`sort-icon-${columnKey}`);
             targetedIcon.className = isDescending ? "fas fa-sort-down text-[11px] text-amber-500" : "fas fa-sort-up text-[11px] text-amber-500";
 
             renderPlayerTable();
         }
 
-        // Handles rendering filtering logic calculations and outputs visual lists
         function renderPlayerTable() {
             const playerTbody = document.getElementById('player-rows');
-            playerTbody.innerHTML = ''; // Wipe out existing DOM list nodes
+            playerTbody.innerHTML = ''; 
 
-            const guildFilterValue = document.getElementById('filter-guild').value.toLowerCase().trim();
-            const allianceFilterValue = document.getElementById('filter-alliance').value.toLowerCase().trim();
-
-            // Run sort calculations directly inside state data vectors array memory structures
             let processedList = [...globalPlayersArray];
 
-            // 1. Process filters strings
-            if (guildFilterValue !== '') {
-                processedList = processedList.filter(p => p.guild.toLowerCase().includes(guildFilterValue));
+            // Filter logic: If any checkbox items are checked, filter by that group profile array list matrix
+            if (selectedGuilds.size > 0) {
+                processedList = processedList.filter(p => selectedGuilds.has(p.guild));
             }
-            if (allianceFilterValue !== '') {
-                processedList = processedList.filter(p => p.alliance.toLowerCase().includes(allianceFilterValue));
+            if (selectedAlliances.size > 0) {
+                processedList = processedList.filter(p => selectedAlliances.has(p.alliance));
             }
 
-            // 2. Compute Sort metrics alignments
             processedList.sort((a, b) => {
-                let valA = a[activeSortColumn];
-                let valB = b[activeSortColumn];
-                return isDescending ? (valB - valA) : (valA - valB);
+                return isDescending ? (b[activeSortColumn] - a[activeSortColumn]) : (a[activeSortColumn] - b[activeSortColumn]);
             });
 
-            // 3. Write rows onto interface engine structure layout container block
             if (processedList.length === 0) {
                 playerTbody.innerHTML = `
                     <tr>
                         <td colspan="6" class="p-8 text-center text-xs text-gray-600 italic tracking-wide">
-                            No matching combatant records match your specific column filtering inputs.
+                            No combatant records match your custom checkbox parameters selections.
                         </td>
                     </tr>`;
                 return;
