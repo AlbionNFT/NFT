@@ -258,7 +258,49 @@
                         </button>
                         <div id="pagination-numbers" class="flex items-center space-x-1 text-xs font-mono"></div>
                         <button id="btn-next-page" onclick="changePage(1)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-amber-400 disabled:opacity-40 disabled:hover:text-gray-400 disabled:cursor-not-allowed transition-all">
-                            Next <i class="fas fa-chevron-right ml-1"></i>
+                            Next <i class="fas fa-chevron-right mr-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl border border-gray-900/80">
+                <div class="p-5 bg-gray-900/30 border-b border-gray-800/60 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-white tracking-wide">Combat Log Streaming Audit</h3>
+                        <p class="text-[11px] text-gray-500 mt-0.5">Chronological record streams tracking weapon renders and structural item assignments.</p>
+                    </div>
+                    <i class="fas fa-crosshairs text-gray-600 text-sm"></i>
+                </div>
+
+                <div class="overflow-x-auto min-h-[350px]">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-900 text-gray-400 text-xs font-bold uppercase tracking-wider bg-gray-900/20">
+                                <th class="p-4 min-w-[240px]">Killer Identity / Arsenal</th>
+                                <th class="p-4 text-center w-[100px]">Killer IP</th>
+                                <th class="p-4 min-w-[240px]">Victim Identity / Equipment</th>
+                                <th class="p-4 text-center w-[100px]">Victim IP</th>
+                                <th class="p-4 text-right min-w-[120px]">Fame Reaped</th>
+                            </tr>
+                        </thead>
+                        <tbody id="combat-log-rows" class="divide-y divide-gray-900/60 text-gray-300"></tbody>
+                    </table>
+                </div>
+
+                <div class="p-4 bg-gray-950/40 border-t border-gray-900 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="text-xs text-gray-500 font-medium tracking-wide">
+                        Showing <span id="log-pagination-start" class="text-gray-300 font-mono">0</span> to 
+                        <span id="log-pagination-end" class="text-gray-300 font-mono">0</span> of 
+                        <span id="log-pagination-total" class="text-amber-500 font-mono">0</span> streams
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button id="btn-log-prev" onclick="changeCombatLogPage(-1)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-amber-400 disabled:opacity-40 disabled:hover:text-gray-400 disabled:cursor-not-allowed transition-all">
+                            <i class="fas fa-chevron-left mr-1"></i> Prev
+                        </button>
+                        <div id="log-pagination-numbers" class="flex items-center space-x-1 text-xs font-mono"></div>
+                        <button id="btn-log-next" onclick="changeCombatLogPage(1)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-amber-400 disabled:opacity-40 disabled:hover:text-gray-400 disabled:cursor-not-allowed transition-all">
+                            Next <i class="fas fa-chevron-right mr-1"></i>
                         </button>
                     </div>
                 </div>
