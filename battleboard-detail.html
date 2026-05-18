@@ -1,768 +1,544 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Single-Battle Analytics | NoFreeThinkers</title>
-    
-    <meta property="og:title" content="🛡️ No Free Thinkers | Live Battle Summary" />
-    <meta property="og:type" content="website" />
-    <meta name="theme-color" content="#fbbf24" />
+    <title>Battleboard Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .glass-panel {
-            background: rgba(17, 24, 39, 0.55);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .glass-nav {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .bg-glow {
-            position: fixed;
-            width: 600px;
-            height: 600px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(217,119,6,0.12) 0%, rgba(0,0,0,0) 70%);
-            z-index: -1;
-            filter: blur(40px);
-        }
-        th.sortable {
-            cursor: pointer;
-            user-select: none;
-        }
-        th.sortable:hover {
-            color: #fbbf24 !important;
-            background: rgba(255, 255, 255, 0.02);
-        }
-        .custom-scroll::-webkit-scrollbar {
-            width: 4px;
-        }
-        .custom-scroll::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
-        }
-        .custom-scroll::-webkit-scrollbar-thumb {
-            background: rgba(245, 158, 11, 0.3);
-            border-radius: 2px;
-        }
-    </style>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col font-sans selection:bg-amber-500 selection:text-black pb-24">
+<body class="bg-gray-950 text-gray-100 min-h-screen p-6 font-sans">
 
-    <div class="bg-glow top-[-10%] left-[-10%] animate-pulse"></div>
-    <div class="bg-glow bottom-[-10%] right-[-10%] animate-pulse" style="animation-duration: 8s;"></div>
-
-    <header class="glass-nav fixed top-0 left-0 w-full z-50 transition-all duration-300">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-gray-950 font-black shadow-lg shadow-amber-500/20">
-                    NFT
-                </div>
-                <span class="text-xl font-bold tracking-wider text-amber-400 uppercase">NoFreeThinkers</span>
-            </div>
-            
-            <nav class="hidden md:flex space-x-6 lg:space-x-8 text-sm font-medium tracking-wide">
-                <a href="index.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Home</a>
-                <a href="index.html#stats" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Guild Stats</a>
-                <a href="members.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Members</a>
-                <a href="build.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Builds</a>
-                <a href="battleboards.html" class="text-amber-400 border-b-2 border-amber-400 pb-1">Battle Boards</a>
-                <a href="index.html#community" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Community</a>
-            </nav>
-
-            <div class="flex items-center">
-                <a href="battleboards.html" class="inline-flex items-center text-xs font-bold text-gray-400 hover:text-amber-400 transition-colors uppercase tracking-wider">
-                    <i class="fas fa-arrow-left mr-2"></i> Return to Logs
-                </a>
-            </div>  
-        </div>
-    </header>
-
-    <main class="flex-grow pt-24 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col space-y-8">
+    <div class="max-w-7xl mx-auto space-y-8">
         
-        <section class="flex flex-col md:flex-row md:items-end justify-between gap-4 py-4 border-b border-gray-900/60">
-            <div class="space-y-2">
-                <div class="inline-flex items-center space-x-2 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-xs font-semibold text-amber-400 uppercase tracking-widest">
-                    <i class="fas fa-chart-bar"></i> Tactical After Action Review
-                </div>
-                <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white">
-                    Albion Battle <span id="header-battle-id" class="text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-400 to-amber-500">#000000000</span>
-                </h1>
-                <p id="header-battle-time" class="text-gray-500 text-xs sm:text-sm font-mono">
-                    Loading telemetry timestamp data...
-                </p>
-            </div>  
-        </section>
+        <header class="border-b border-gray-900 pb-4">
+            <h1 class="text-2xl font-black text-amber-500 tracking-wide uppercase">Combat Killboard System</h1>
+            <p class="text-sm text-gray-500">Real-time breakdown of player and guild battle metrics.</p>
+        </header>
 
-        <div id="detail-loading" class="flex flex-col items-center justify-center space-y-4 py-24 transition-all duration-300">
-            <div class="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-sm font-medium text-gray-400 tracking-wide">Decompressing Combat Payload Metrics...</p>
+        <div id="detail-loading" class="hidden text-center py-8 text-amber-400 font-medium">Loading battleboard records...</div>
+        
+        <div id="error-panel" class="hidden bg-red-950/40 border border-red-900 text-red-200 p-4 rounded-lg my-4">
+            <div class="flex items-center gap-2 font-bold mb-1 text-red-400">
+                <i class="fas fa-exclamation-triangle"></i> Data Processing Exception Intercepted
+            </div>
+            <p id="error-message-text" class="text-sm font-mono text-red-300/90"></p>
         </div>
 
-        <div id="detail-content" class="hidden space-y-8">
+        <div id="detail-content" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
             
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                
-                <div id="alliance-summary-card" class="glass-panel rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between">
-                    <div>
-                        <div class="p-4 bg-gray-950/40 border-b border-gray-800/60 flex items-center justify-between">
-                            <span class="text-xs font-black uppercase tracking-wider text-amber-400">Alliances Spectrum</span>
-                            <i class="fas fa-shield-alt text-gray-600 text-sm"></i>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs border-collapse">
-                                <thead>
-                                    <tr class="text-gray-500 border-b border-gray-900 bg-gray-900/10 font-bold uppercase tracking-wider">
-                                        <th class="p-3">Alliance Tag</th>
-                                        <th class="p-3 text-center">Players</th>
-                                        <th class="p-3 text-center text-emerald-400">Kills</th>
-                                        <th class="p-3 text-center text-red-400">Deaths</th>
-                                        <th class="p-3 text-right">Kill Fame</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="alliance-rows" class="divide-y divide-gray-900/40 text-gray-300"></tbody>
-                            </table>
-                        </div>
+            <div class="lg:col-span-1 bg-gray-900/40 border border-gray-900 rounded-xl p-4 space-y-6 self-start">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Filter By Guild</h3>
+                        <button onclick="clearFilterSelection('guild', event)" class="text-xs text-amber-500/70 hover:text-amber-400 transition-colors">Clear</button>
                     </div>
-                    <div class="p-3 bg-gray-950/40 border-t border-gray-900 flex items-center justify-between text-[11px]">
-                        <div class="text-gray-500 font-medium">
-                            Showing <span id="alliance-start" class="text-gray-300 font-mono">0</span>-<span id="alliance-end" class="text-gray-300 font-mono">0</span> of <span id="alliance-total" class="text-amber-500 font-mono">0</span>
+                    <div id="guild-checkbox-list" class="max-h-48 overflow-y-auto space-y-1 pr-2 text-sm text-gray-300">
                         </div>
-                        <div class="flex items-center space-x-1">
-                            <button id="btn-alliance-prev" onclick="changeAlliancePage(-1)" class="px-2 py-1 text-[10px] font-bold rounded bg-gray-900 border border-gray-800 text-gray-400 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all">Prev</button>
-                            <button id="btn-alliance-next" onclick="changeAlliancePage(1)" class="px-2 py-1 text-[10px] font-bold rounded bg-gray-900 border border-gray-800 text-gray-400 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all">Next</button>
-                        </div>
-                    </div>
                 </div>
 
-                <div class="glass-panel rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between">
-                    <div>
-                        <div class="p-4 bg-gray-950/40 border-b border-gray-800/60 flex items-center justify-between">
-                            <span class="text-xs font-black uppercase tracking-wider text-amber-400">Guilds Breakdown</span>
-                            <i class="fas fa-flag text-gray-600 text-sm"></i>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs border-collapse">
-                                <thead>
-                                    <tr class="text-gray-500 border-b border-gray-900 bg-gray-900/10 font-bold uppercase tracking-wider">
-                                        <th class="p-3">Guild Name</th>
-                                        <th class="p-3">Alliance</th>
-                                        <th class="p-3 text-center">Players</th>
-                                        <th class="p-3 text-center text-emerald-400">Kills</th>
-                                        <th class="p-3 text-center text-red-400">Deaths</th>
-                                        <th class="p-3 text-right">Kill Fame</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="guild-rows" class="divide-y divide-gray-900/40 text-gray-300"></tbody>
-                            </table>
-                        </div>
+                <div class="border-t border-gray-950 pt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Filter By Alliance</h3>
+                        <button onclick="clearFilterSelection('alliance', event)" class="text-xs text-amber-500/70 hover:text-amber-400 transition-colors">Clear</button>
                     </div>
-                    <div class="p-3 bg-gray-950/40 border-t border-gray-900 flex items-center justify-between text-[11px]">
-                        <div class="text-gray-500 font-medium">
-                            Showing <span id="guild-start" class="text-gray-300 font-mono">0</span>-<span id="guild-end" class="text-gray-300 font-mono">0</span> of <span id="guild-total" class="text-amber-500 font-mono">0</span>
+                    <div id="alliance-checkbox-list" class="max-h-48 overflow-y-auto space-y-1 pr-2 text-sm text-gray-300">
                         </div>
-                        <div class="flex items-center space-x-1">
-                            <button id="btn-guild-prev" onclick="changeGuildPage(-1)" class="px-2 py-1 text-[10px] font-bold rounded bg-gray-900 border border-gray-800 text-gray-400 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all">Prev</button>
-                            <button id="btn-guild-next" onclick="changeGuildPage(1)" class="px-2 py-1 text-[10px] font-bold rounded bg-gray-900 border border-gray-800 text-gray-400 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all">Next</button>
-                        </div>
-                    </div>
                 </div>
-
             </div>
 
-            <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl border border-gray-900/80">
-                <div class="p-5 bg-gray-900/30 border-b border-gray-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h3 class="text-sm font-bold text-white tracking-wide">Combatant Manifesto</h3>
-                        <p class="text-[11px] text-gray-500 mt-0.5">Click headers to sort values. Click Guild or Alliance columns to toggle checkbox filtering.</p>
-                    </div>
-                    <div class="relative">
-                        <span id="player-count-badge" class="bg-gray-950 border border-gray-800 text-gray-400 text-[11px] px-2.5 py-1 rounded-md font-mono">
-                            0 Players Tracked
+            <div class="lg:col-span-3 space-y-8">
+                
+                <div class="bg-gray-900/20 border border-gray-900 rounded-xl overflow-hidden shadow-xl shadow-black/40">
+                    <div class="p-4 bg-gray-900/40 border-b border-gray-900 flex justify-between items-center">
+                        <h2 class="font-bold text-gray-200 tracking-wide">Guild Standings</h2>
+                        <span class="text-xs font-mono px-2 py-0.5 rounded bg-gray-950 border border-gray-900 text-gray-400">
+                            Showing <span id="guild-start" class="text-amber-400 font-bold">0</span>-<span id="guild-end" class="text-amber-400 font-bold">0</span> of <span id="guild-total" class="text-gray-300">0</span> Entries
                         </span>
                     </div>
-                </div>
-
-                <div class="overflow-x-auto min-h-[350px]">
-                    <table class="w-full text-left border-collapse text-xs sm:text-sm">
-                        <thead>
-                            <tr class="border-b border-gray-900 text-gray-400 text-xs font-bold uppercase tracking-wider bg-gray-900/20">
-                                <th class="p-4 min-w-[160px]">Combatant Character Name</th>
-                                
-                                <th class="p-4 min-w-[180px] relative">
-                                    <div class="inline-flex items-center gap-1.5 cursor-pointer hover:text-amber-400 transition-colors" onclick="toggleDropdown('guild-dropdown', event)">
-                                        <span>Guild Vector</span>
-                                        <i class="fas fa-chevron-down text-[10px]"></i>
-                                    </div>
-                                    <div id="guild-dropdown" class="hidden absolute top-12 left-4 z-30 w-56 glass-panel rounded-xl shadow-2xl bg-gray-950 p-3 flex flex-col space-y-2 max-h-60 overflow-y-auto custom-scroll border border-amber-500/20">
-                                        <div class="text-[10px] uppercase font-black tracking-widest text-gray-500 border-b border-gray-900 pb-1.5 flex justify-between items-center">
-                                            <span>Active Guilds</span>
-                                            <button onclick="clearFilterSelection('guild', event)" class="text-amber-500 hover:underline normal-case font-bold">Clear</button>
-                                        </div>
-                                        <div id="guild-checkbox-list" class="flex flex-col space-y-1.5 text-xs text-gray-300 font-medium"></div>
-                                    </div>
-                                </th>
-                                
-                                <th class="p-4 min-w-[140px] relative">
-                                    <div class="inline-flex items-center gap-1.5 cursor-pointer hover:text-amber-400 transition-colors" onclick="toggleDropdown('alliance-dropdown', event)">
-                                        <span>Alliance</span>
-                                        <i class="fas fa-chevron-down text-[10px]"></i>
-                                    </div>
-                                    <div id="alliance-dropdown" class="hidden absolute top-12 left-4 z-30 w-48 glass-panel rounded-xl shadow-2xl bg-gray-950 p-3 flex flex-col space-y-2 max-h-60 overflow-y-auto custom-scroll border border-amber-500/20">
-                                        <div class="text-[10px] uppercase font-black tracking-widest text-gray-500 border-b border-gray-900 pb-1.5 flex justify-between items-center">
-                                            <span>Active Tags</span>
-                                            <button onclick="clearFilterSelection('alliance', event)" class="text-amber-500 hover:underline normal-case font-bold">Clear</button>
-                                        </div>
-                                        <div id="alliance-checkbox-list" class="flex flex-col space-y-1.5 text-xs text-gray-300 font-medium"></div>
-                                    </div>
-                                </th>
-
-                                <th class="p-4 text-center text-emerald-400 sortable transition-colors" onclick="toggleSort('kills')">
-                                    <div class="flex items-center justify-center gap-1.5 py-2">
-                                        <span>Kills</span>
-                                        <i id="sort-icon-kills" class="fas fa-sort text-[10px] text-gray-600"></i>
-                                    </div>
-                                </th>
-                                <th class="p-4 text-center text-red-400 sortable transition-colors" onclick="toggleSort('deaths')">
-                                    <div class="flex items-center justify-center gap-1.5 py-2">
-                                        <span>Deaths</span>
-                                        <i id="sort-icon-deaths" class="fas fa-sort text-[10px] text-gray-600"></i>
-                                    </div>
-                                </th>
-                                <th class="p-4 text-right text-amber-400 sortable transition-colors" onclick="toggleSort('fame')">
-                                    <div class="flex items-center justify-end gap-1.5 py-2">
-                                        <span>Kill Fame</span>
-                                        <i id="sort-icon-fame" class="fas fa-sort-down text-[11px] text-amber-500"></i>
-                                    </div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="player-rows" class="divide-y divide-gray-900/60 text-gray-300"></tbody>
-                    </table>
-                </div>
-
-                <div class="p-4 bg-gray-950/40 border-t border-gray-900 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div class="text-xs text-gray-500 font-medium tracking-wide">
-                        Showing <span id="pagination-start" class="text-gray-300 font-mono">0</span> to 
-                        <span id="pagination-end" class="text-gray-300 font-mono">0</span> of 
-                        <span id="pagination-total" class="text-amber-500 font-mono">0</span> entries
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-gray-950/60 border-b border-gray-900 text-gray-400 font-semibold uppercase text-xs tracking-wider">
+                                    <th class="p-3">Guild Name</th>
+                                    <th class="p-3">Alliance</th>
+                                    <th class="p-3 text-center">Active Players</th>
+                                    <th class="p-3 text-center">Kills</th>
+                                    <th class="p-3 text-center">Deaths</th>
+                                    <th class="p-3 text-right">Total Kill Fame</th>
+                                </tr>
+                            </thead>
+                            <tbody id="guild-rows" class="divide-y divide-gray-950/40">
+                                </tbody>
+                        </table>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <button id="btn-prev-page" onclick="changePage(-1)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-amber-400 disabled:opacity-40 disabled:hover:text-gray-400 disabled:cursor-not-allowed transition-all">
+                    <div class="p-3 bg-gray-950/40 border-t border-gray-900 flex justify-end gap-2">
+                        <button id="btn-guild-prev" onclick="changeGuildPage(-1)" class="px-3 py-1 bg-gray-900 border border-gray-800 rounded text-gray-400 disabled:opacity-30 disabled:pointer-events-none hover:text-amber-400 transition-colors text-xs font-bold">
                             <i class="fas fa-chevron-left mr-1"></i> Prev
                         </button>
-                        <div id="pagination-numbers" class="flex items-center space-x-1 text-xs font-mono"></div>
-                        <button id="btn-next-page" onclick="changePage(1)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-amber-400 disabled:opacity-40 disabled:hover:text-gray-400 disabled:cursor-not-allowed transition-all">
+                        <button id="btn-guild-next" onclick="changeGuildPage(1)" class="px-3 py-1 bg-gray-900 border border-gray-800 rounded text-gray-400 disabled:opacity-30 disabled:pointer-events-none hover:text-amber-400 transition-colors text-xs font-bold">
                             Next <i class="fas fa-chevron-right ml-1"></i>
                         </button>
                     </div>
                 </div>
-            </div>
 
-        </div>
+                <div class="bg-gray-900/20 border border-gray-900 rounded-xl overflow-hidden shadow-xl shadow-black/40">
+                    <div class="p-4 bg-gray-900/40 border-b border-gray-900 flex justify-between items-center">
+                        <h2 class="font-bold text-gray-200 tracking-wide">Combatant Records</h2>
+                        <span class="text-xs font-mono px-2 py-0.5 rounded bg-gray-950 border border-gray-900 text-gray-400">
+                            Showing <span id="pagination-start" class="text-amber-400 font-bold">0</span>-<span id="pagination-end" class="text-amber-400 font-bold">0</span> of <span id="pagination-total" class="text-gray-300">0</span> Entries
+                        </span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-gray-950/60 border-b border-gray-900 text-gray-400 font-semibold uppercase text-xs tracking-wider select-none">
+                                    <th class="p-4">Combatant</th>
+                                    <th class="p-4">Guild</th>
+                                    <th class="p-4">Alliance</th>
+                                    <th class="p-4 text-center cursor-pointer hover:bg-gray-900/30 transition-colors" onclick="toggleSort('kills')">
+                                        Kills <i id="sort-icon-kills" class="fas fa-sort text-[10px] text-gray-600 ml-1"></i>
+                                    </th>
+                                    <th class="p-4 text-center cursor-pointer hover:bg-gray-900/30 transition-colors" onclick="toggleSort('deaths')">
+                                        Deaths <i id="sort-icon-deaths" class="fas fa-sort text-[10px] text-gray-600 ml-1"></i>
+                                    </th>
+                                    <th class="p-4 text-right cursor-pointer hover:bg-gray-900/30 transition-colors" onclick="toggleSort('fame')">
+                                        Fame <i id="sort-icon-fame" class="fas fa-sort text-[10px] text-gray-600 ml-1"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="player-rows" class="divide-y divide-gray-950/40">
+                                </tbody>
+                        </table>
+                    </div>
+                    <div class="p-4 bg-gray-950/40 border-t border-gray-900 flex justify-between items-center">
+                        <button id="btn-prev-page" onclick="changePage(-1)" class="px-3 py-1 bg-gray-900 border border-gray-800 rounded text-gray-400 disabled:opacity-30 disabled:pointer-events-none hover:text-amber-400 transition-colors text-xs font-bold">
+                            <i class="fas fa-arrow-left mr-1"></i> Previous
+                        </button>
+                        <div id="pagination-numbers" class="flex items-center gap-1.5 text-xs">
+                            </div>
+                        <button id="btn-next-page" onclick="changePage(1)" class="px-3 py-1 bg-gray-900 border border-gray-800 rounded text-gray-400 disabled:opacity-30 disabled:pointer-events-none hover:text-amber-400 transition-colors text-xs font-bold">
+                            Next <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
 
-        <div id="error-panel" class="hidden max-w-xl mx-auto glass-panel p-8 rounded-2xl border border-red-500/20 bg-red-950/5 text-center space-y-4">
-            <div class="text-red-400 text-3xl"><i class="fas fa-database"></i></div>
-            <h3 class="text-base font-bold text-white">Record Segment Missing</h3>
-            <p id="error-message-text" class="text-xs text-gray-400 leading-relaxed">
-                The targeted execution tracking data cannot be extrapolated from your JSON dataset stack array.
-            </p>
-            <div class="pt-2">
-                <a href="battleboards.html" class="inline-flex items-center bg-gray-900 hover:bg-gray-800 border border-gray-800 text-xs text-amber-400 font-bold px-4 py-2 rounded-xl transition-all">
-                    <i class="fas fa-arrow-left mr-2"></i> Return to Terminal Index
-                </a>
             </div>
         </div>
-    </main>
-
-    <footer class="glass-nav mt-auto w-full py-6">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 space-y-4 sm:space-y-0">
-            <div>
-                &copy; 2026 <span class="text-gray-400 font-medium">NoFreeThinkers</span>. Automated Operational Diagnostics Node.
-            </div>
-            <div class="text-right tracking-wide">
-                Synced Engine <span class="text-amber-500/70 font-mono">UTC System Static</span>
-            </div>
-        </div>
-    </footer>
+    </div>
 
     <script>
-            const githubUser = 'AlbionNFT';
-            const repoName = 'NFT'; 
-            const localJsonUrl = `/battle-data.json?t=${Date.now()}`;
+        // --- DATA ARCHITECTURE DEFINITIONS ---
+        let globalPlayersArray = [];
+        let globalGuildArray = [];
 
-            // Global footprint tracking components arrays
-            let globalPlayersArray = [];
-            let globalAllianceArray = [];
-            let globalGuildArray = [];
+        let selectedGuilds = new Set();
+        let selectedAlliances = new Set();
 
-            // Sorting configuration tracking
-            let activeSortColumn = 'fame'; 
-            let isDescending = true;
-            let selectedGuilds = new Set();
-            let selectedAlliances = new Set();
+        let guildCurrentPage = 1;
+        const guildRowsPerPage = 5;
 
-            // Independent Pagination State Controls
-            let playerCurrentPage = 1;
-            const playerRowsPerPage = 15;
+        let playerCurrentPage = 1;
+        const playerRowsPerPage = 10;
 
-            let allianceCurrentPage = 1;
-            const allianceRowsPerPage = 10;
+        let activeSortColumn = 'fame';
+        let isDescending = true;
 
-            let guildCurrentPage = 1;
-            const guildRowsPerPage = 10;
+        // Numeric parsing formatter utility
+        function formatCompactFame(value) {
+            if (!value || isNaN(value)) return "0";
+            if (value >= 1_000_000) return (value / 1_000_000).toFixed(2) + "M";
+            if (value >= 1_000) return (value / 1_000).toFixed(1) + "k";
+            return value.toString();
+        }
 
-            function formatCompactFame(num) {
-                if (!num || isNaN(num)) return "0";
-                const val = parseFloat(num);
-                if (val >= 1e9) return (val / 1e9).toFixed(2) + 'B';
-                if (val >= 1e6) return (val / 1e6).toFixed(2) + 'M';
-                if (val >= 1e3) return (val / 1e3).toFixed(1) + 'k';
-                return val.toLocaleString();
+        // --- GUILD TABLE RENDERING SYSTEM ---
+        function changeGuildPage(direction) {
+            guildCurrentPage += direction;
+            renderGuildTable();
+        }
+
+        function renderGuildTable() {
+            const tbody = document.getElementById('guild-rows');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            const total = globalGuildArray.length;
+            const totalPages = Math.ceil(total / guildRowsPerPage) || 1;
+            if (guildCurrentPage > totalPages) guildCurrentPage = totalPages;
+            if (guildCurrentPage < 1) guildCurrentPage = 1;
+
+            const start = (guildCurrentPage - 1) * guildRowsPerPage;
+            const end = Math.min(start + guildRowsPerPage, total);
+            const paginated = globalGuildArray.slice(start, end);
+
+            paginated.forEach(g => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-950";
+                row.innerHTML = `
+                    <td class="p-3 font-bold text-amber-400">${g.name}</td>
+                    <td class="p-3 font-medium text-gray-500">${g.alliance === 'NONE' ? '-' : g.alliance}</td>
+                    <td class="p-3 text-center font-mono">${g.players}</td>
+                    <td class="p-3 text-center font-bold text-emerald-400">${g.kills}</td>
+                    <td class="p-3 text-center font-bold text-red-400">${g.deaths}</td>
+                    <td class="p-3 text-right font-black font-mono text-gray-400">${formatCompactFame(g.fame)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('guild-start').innerText = total === 0 ? 0 : start + 1;
+            document.getElementById('guild-end').innerText = end;
+            document.getElementById('guild-total').innerText = total;
+            document.getElementById('btn-guild-prev').disabled = (guildCurrentPage === 1);
+            document.getElementById('btn-guild-next').disabled = (guildCurrentPage === totalPages);
+        }
+
+        // --- FILTER SELECTION DROPDOWN POPULATION MODULE ---
+        function populateFilterMenus(guildsList, alliancesList) {
+            const guildContainer = document.getElementById('guild-checkbox-list');
+            const allianceContainer = document.getElementById('alliance-checkbox-list');
+            if(!guildContainer || !allianceContainer) return;
+
+            guildContainer.innerHTML = '';
+            allianceContainer.innerHTML = '';
+
+            guildsList.sort().forEach(gName => {
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-2 cursor-pointer hover:text-amber-400 py-0.5 select-none";
+                label.innerHTML = `
+                    <input type="checkbox" value="${gName}" class="accent-amber-500 rounded border-gray-800 bg-gray-900 focus:ring-0">
+                    <span class="truncate">${gName}</span>
+                `;
+                label.querySelector('input').addEventListener('change', function() {
+                    if (this.checked) selectedGuilds.add(gName);
+                    else selectedGuilds.delete(gName);
+                    playerCurrentPage = 1; 
+                    renderPlayerTable();
+                });
+                guildContainer.appendChild(label);
+            });
+
+            alliancesList.sort().forEach(aTag => {
+                const displayName = aTag === 'NONE' ? '[No Alliance]' : aTag;
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-2 cursor-pointer hover:text-amber-400 py-0.5 select-none";
+                label.innerHTML = `
+                    <input type="checkbox" value="${aTag}" class="accent-amber-500 rounded border-gray-800 bg-gray-900 focus:ring-0">
+                    <span class="truncate">${displayName}</span>
+                `;
+                label.querySelector('input').addEventListener('change', function() {
+                    if (this.checked) selectedAlliances.add(aTag);
+                    else selectedAlliances.delete(aTag);
+                    playerCurrentPage = 1; 
+                    renderPlayerTable();
+                });
+                allianceContainer.appendChild(label);
+            });
+        }
+
+        function clearFilterSelection(type, event) {
+            event.stopPropagation();
+            if (type === 'guild') {
+                selectedGuilds.clear();
+                document.querySelectorAll('#guild-checkbox-list input').forEach(cb => cb.checked = false);
+            } else {
+                selectedAlliances.clear();
+                document.querySelectorAll('#alliance-checkbox-list input').forEach(cb => cb.checked = false);
+            }
+            playerCurrentPage = 1; 
+            renderPlayerTable();
+        }
+
+        function toggleSort(columnKey) {
+            if (activeSortColumn === columnKey) {
+                isDescending = !isDescending; 
+            } else {
+                activeSortColumn = columnKey;
+                isDescending = true; 
             }
 
-            function formatUtcTimestamp(isoString) {
-                try {
-                    const d = new Date(isoString);
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()} - ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
-                } catch(e) { return "Unknown Horizon Frame"; }
+            ['kills', 'deaths', 'fame'].forEach(col => {
+                const icon = document.getElementById(`sort-icon-${col}`);
+                if(icon) icon.className = "fas fa-sort text-[10px] text-gray-600";
+            });
+
+            const targetedIcon = document.getElementById(`sort-icon-${columnKey}`);
+            if(targetedIcon) {
+                targetedIcon.className = isDescending ? "fas fa-sort-down text-[11px] text-amber-500" : "fas fa-sort-up text-[11px] text-amber-500";
             }
 
-            function getQueryBattleId() {
-                const params = new URLSearchParams(window.location.search);
-                return params.get('EventId');
+            playerCurrentPage = 1; 
+            renderPlayerTable();
+        }
+
+        function changePage(direction) {
+            playerCurrentPage += direction;
+            renderPlayerTable();
+        }
+
+        function goToPage(pageNum) {
+            playerCurrentPage = pageNum;
+            renderPlayerTable();
+        }
+
+        function renderPlayerTable() {
+            const playerTbody = document.getElementById('player-rows');
+            if(!playerTbody) return;
+            playerTbody.innerHTML = ''; 
+
+            let processedList = [...globalPlayersArray];
+
+            if (selectedGuilds.size > 0) {
+                processedList = processedList.filter(p => selectedGuilds.has(p.guildName));
+            }
+            if (selectedAlliances.size > 0) {
+                processedList = processedList.filter(p => selectedAlliances.has(p.allianceName));
             }
 
-            function toggleDropdown(dropdownId, event) {
-                event.stopPropagation();
-                const element = document.getElementById(dropdownId);
-                const isHidden = element.classList.contains('hidden');
+            processedList.sort((a, b) => {
+                return isDescending ? (b[activeSortColumn] - a[activeSortColumn]) : (a[activeSortColumn] - b[activeSortColumn]);
+            });
+
+            const totalEntries = processedList.length;
+
+            if (totalEntries === 0) {
+                playerTbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-xs text-gray-600 italic tracking-wide">
+                            No combatant records match your specific checkbox selections.
+                        </td>
+                    </tr>`;
                 
-                document.getElementById('guild-dropdown').classList.add('hidden');
-                document.getElementById('alliance-dropdown').classList.add('hidden');
-
-                if (isHidden) element.classList.remove('hidden');
+                document.getElementById('pagination-start').innerText = '0';
+                document.getElementById('pagination-end').innerText = '0';
+                document.getElementById('pagination-total').innerText = '0';
+                document.getElementById('btn-prev-page').disabled = true;
+                document.getElementById('btn-next-page').disabled = true;
+                document.getElementById('pagination-numbers').innerHTML = '';
+                return;
             }
 
-            window.addEventListener('click', () => {
-                if (document.getElementById('guild-dropdown')) document.getElementById('guild-dropdown').classList.add('hidden');
-                if (document.getElementById('alliance-dropdown')) document.getElementById('alliance-dropdown').classList.add('hidden');
+            const totalPages = Math.ceil(totalEntries / playerRowsPerPage);
+            if (playerCurrentPage > totalPages) playerCurrentPage = totalPages;
+            if (playerCurrentPage < 1) playerCurrentPage = 1;
+
+            const startIndex = (playerCurrentPage - 1) * playerRowsPerPage;
+            const endIndex = Math.min(startIndex + playerRowsPerPage, totalEntries);
+            const paginatedList = processedList.slice(startIndex, endIndex);
+
+            paginatedList.forEach(p => {
+                const allianceTag = p.allianceName === 'NONE' ? "-" : p.allianceName;
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/40";
+                row.innerHTML = `
+                    <td class="p-4 font-bold text-gray-100 flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500"></span>
+                        ${p.name}
+                    </td>
+                    <td class="p-4 text-gray-300 font-medium">${p.guildName}</td>
+                    <td class="p-4 text-xs font-mono font-bold text-gray-500">${allianceTag}</td>
+                    <td class="p-4 text-center font-black text-emerald-400 font-mono text-sm">${p.kills}</td>
+                    <td class="p-4 text-center font-black text-red-400 font-mono text-sm">${p.deaths}</td>
+                    <td class="p-4 text-right font-black text-amber-400 font-mono">${formatCompactFame(p.fame)}</td>
+                `;
+                playerTbody.appendChild(row);
             });
 
-            // Safe attachment of click stopPropagation helpers once elements exist
-            document.addEventListener('DOMContentLoaded', () => {
-                const gd = document.getElementById('guild-dropdown');
-                const ad = document.getElementById('alliance-dropdown');
-                if (gd) gd.addEventListener('click', (e) => e.stopPropagation());
-                if (ad) ad.addEventListener('click', (e) => e.stopPropagation());
-            });
+            document.getElementById('pagination-start').innerText = startIndex + 1;
+            document.getElementById('pagination-end').innerText = endIndex;
+            document.getElementById('pagination-total').innerText = totalEntries;
 
-            // Dynamic uniform profile constructor helper targeting Albion API format
-            function createEmptyPlayerProfile(apiData) {
-                return {
-                    name: apiData.Name || "Unknown Combatant",
-                    guildName: apiData.GuildName && apiData.GuildName.trim() !== "" ? apiData.GuildName : "Unknown Guild",
-                    allianceName: apiData.AllianceName && apiData.AllianceName.trim() !== "" ? apiData.AllianceName.toUpperCase() : "NONE",
-                    kills: 0,
-                    deaths: 0,
-                    fame: 0
-                };
-            }
+            document.getElementById('btn-prev-page').disabled = (playerCurrentPage === 1);
+            document.getElementById('btn-next-page').disabled = (playerCurrentPage === totalPages);
 
-            async function processBattleboardDeconstruction() {
-                const battleIdStr = getQueryBattleId();
-                if (!battleIdStr) {
-                    renderErrorState("Operational fault: No precise parameters query string specified.");
-                    return;
+            const numContainer = document.getElementById('pagination-numbers');
+            if(!numContainer) return;
+            numContainer.innerHTML = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (totalPages > 5 && i !== 1 && i !== totalPages && Math.abs(i - playerCurrentPage) > 1) {
+                    if (i === 2 && playerCurrentPage > 3) {
+                        const dots = document.createElement('span');
+                        dots.className = "px-1.5 text-gray-600";
+                        dots.innerText = "...";
+                        numContainer.appendChild(dots);
+                        i = playerCurrentPage - 2;
+                    } else if (i === playerCurrentPage + 1 && playerCurrentPage < totalPages - 2) {
+                        const dots = document.createElement('span');
+                        dots.className = "px-1.5 text-gray-600";
+                        dots.innerText = "...";
+                        numContainer.appendChild(dots);
+                        i = totalPages - 1;
+                    }
+                    continue;
                 }
 
-                try {
-                    const res = await fetch(localJsonUrl);
-                    if (!res.ok) throw new Error(`HTTP payload breakdown: ${res.status}`);
-                    const events = await res.json();
+                const pageBtn = document.createElement('button');
+                pageBtn.innerText = i;
+                if (i === playerCurrentPage) {
+                    pageBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-gray-950 font-bold shadow-sm shadow-amber-500/20 cursor-default";
+                } else {
+                    pageBtn.className = "px-2.5 py-1 rounded-md bg-gray-900 border border-gray-800 text-gray-400 hover:text-amber-400 font-medium transition-colors cursor-pointer";
+                    pageBtn.onclick = () => goToPage(i);
+                }
+                numContainer.appendChild(pageBtn);
+            }
+        }
 
-                    // Filter events matching the target URL argument via BattleId or unique EventId parameters
-                    const battleEvents = events.filter(e => 
-                        String(e.BattleId) === String(battleIdStr) || String(e.EventId) === String(battleIdStr)
-                    );
+        function renderErrorState(customErrorMessage) {
+            const errText = document.getElementById('error-message-text');
+            if(errText) errText.innerText = customErrorMessage;
+            
+            if(document.getElementById('detail-loading')) document.getElementById('detail-loading').classList.add('hidden');
+            if(document.getElementById('detail-content')) document.getElementById('detail-content').classList.add('hidden');
+            if(document.getElementById('error-panel')) document.getElementById('error-panel').classList.remove('hidden');
+        }
 
-                    if (battleEvents.length === 0) {
-                        renderErrorState(`Battle record context token #${battleIdStr} doesn't exist.`);
-                        return;
-                    }
+        // --- FILTER DATA EXTRACTION & DECONSTRUCTION MODULE ---
+        function processBattleboardDeconstruction() {
+            try {
+                if (!window.rawBattleboardData || !Array.isArray(window.rawBattleboardData)) {
+                    throw new Error("Target dataset variable array missing or structurally corrupt.");
+                }
 
-                    // Reference properties from the initial event node
-                    const referenceEvent = battleEvents[0];
-                    document.getElementById('header-battle-id').innerText = `#${referenceEvent.BattleId || referenceEvent.EventId}`;
-                    document.getElementById('header-battle-time').innerText = formatUtcTimestamp(referenceEvent.TimeStamp);
+                const playersMap = new Map();
+                const guildsMap = new Map();
+                const uniqueGuilds = new Set();
+                const uniqueAlliances = new Set();
 
-                    // Aggregate structural entities out of individual kill event modules
-                    let playerAggregationMap = {};
+                window.rawBattleboardData.forEach(event => {
+                    const killer = event.Killer;
+                    const victim = event.Victim;
+                    const killFame = event.TotalVictimKillFame || 0;
 
-                    battleEvents.forEach(event => {
-                        // Process Killer metrics
-                        if (event.Killer && event.Killer.Id) {
-                            const kId = event.Killer.Id;
-                            if (!playerAggregationMap[kId]) {
-                                playerAggregationMap[kId] = createEmptyPlayerProfile(event.Killer);
-                            }
-                            playerAggregationMap[kId].kills += 1;
-                            playerAggregationMap[kId].fame += (event.TotalVictimKillFame || 0);
-                        }
+                    const processCombatant = (player, isKiller) => {
+                        if (!player || !player.Name) return;
 
-                        // Process Victim metrics 
-                        if (event.Victim && event.Victim.Id) {
-                            const vId = event.Victim.Id;
-                            if (!playerAggregationMap[vId]) {
-                                playerAggregationMap[vId] = createEmptyPlayerProfile(event.Victim);
-                            }
-                            playerAggregationMap[vId].deaths += 1;
-                        }
+                        const pName = player.Name;
+                        const gName = player.GuildName && player.GuildName.trim() !== "" ? player.GuildName : "[No Guild]";
+                        
+                        // Treat empty strings "" or missing alliances explicitly as "NONE"
+                        const aName = player.AllianceName && player.AllianceName.trim() !== "" ? player.AllianceName : "NONE";
 
-                        // Process Assistant / Participant metrics tracking
-                        if (event.Participants && Array.isArray(event.Participants)) {
-                            event.Participants.forEach(p => {
-                                if (p.Id) {
-                                    if (!playerAggregationMap[p.Id]) {
-                                        playerAggregationMap[p.Id] = createEmptyPlayerProfile(p);
-                                    }
-                                }
+                        // 1. Process Individual Player Properties
+                        if (!playersMap.has(pName)) {
+                            playersMap.set(pName, {
+                                name: pName,
+                                guildName: gName,
+                                allianceName: aName,
+                                kills: 0,
+                                deaths: 0,
+                                fame: 0
                             });
                         }
-                    });
 
-                    globalPlayersArray = Object.values(playerAggregationMap);
-                    document.getElementById('player-count-badge').innerText = `${globalPlayersArray.length} Combatants Logged`;
-
-                    let allianceMap = {};
-                    let guildMap = {};
-
-                    globalPlayersArray.forEach(p => {
-                        if (!allianceMap[p.allianceName]) {
-                            allianceMap[p.allianceName] = { name: p.allianceName, players: 0, kills: 0, deaths: 0, fame: 0 };
+                        const pRecord = playersMap.get(pName);
+                        if (isKiller) {
+                            pRecord.kills += 1;
+                            pRecord.fame += killFame;
+                        } else {
+                            pRecord.deaths += 1;
                         }
-                        allianceMap[p.allianceName].players++;
-                        allianceMap[p.allianceName].kills += p.kills;
-                        allianceMap[p.allianceName].deaths += p.deaths;
-                        allianceMap[p.allianceName].fame += p.fame;
 
-                        if (!guildMap[p.guildName]) {
-                            guildMap[p.guildName] = { name: p.guildName, alliance: p.allianceName, players: 0, kills: 0, deaths: 0, fame: 0 };
+                        // Collect dynamic filter keys
+                        if (player.GuildName && player.GuildName.trim() !== "") uniqueGuilds.add(gName);
+                        uniqueAlliances.add(aName);
+
+                        // 2. Aggregate Guild Statistics Maps
+                        if (player.GuildName && player.GuildName.trim() !== "") {
+                            if (!guildsMap.has(gName)) {
+                                guildsMap.set(gName, {
+                                    name: gName,
+                                    alliance: aName,
+                                    uniquePlayers: new Set(),
+                                    kills: 0,
+                                    deaths: 0,
+                                    fame: 0
+                                });
+                            }
+                            const gRecord = guildsMap.get(gName);
+                            gRecord.uniquePlayers.add(pName);
+                            if (isKiller) {
+                                gRecord.kills += 1;
+                                gRecord.fame += killFame;
+                            } else {
+                                gRecord.deaths += 1;
+                            }
                         }
-                        guildMap[p.guildName].players++;
-                        guildMap[p.guildName].kills += p.kills;
-                        guildMap[p.guildName].deaths += p.deaths;
-                        guildMap[p.guildName].fame += p.fame;
-                    });
+                    };
 
-                    globalAllianceArray = Object.values(allianceMap).sort((a,b) => b.fame - a.fame);
-                    globalGuildArray = Object.values(guildMap).sort((a,b) => b.fame - a.fame);
-
-                    populateFilterMenus(Object.keys(guildMap), Object.keys(allianceMap));
-                    
-                    renderAllianceTable();
-                    renderGuildTable();
-                    renderPlayerTable();
-
-                    document.getElementById('detail-loading').classList.add('hidden');
-                    document.getElementById('detail-content').classList.remove('hidden');
-
-                } catch (err) {
-                    console.error("Pipeline failure parameters missing:", err);
-                    renderErrorState(`System file framework process breakdown: ${err.message}`);
-                }
-            }
-
-            // --- ALLIANCE TABLE RENDERING SYSTEM ---
-            function changeAlliancePage(direction) {
-                allianceCurrentPage += direction;
-                renderAllianceTable();
-            }
-
-            function renderAllianceTable() {
-                const tbody = document.getElementById('alliance-rows');
-                if(!tbody) return;
-                tbody.innerHTML = '';
-                
-                const total = globalAllianceArray.length;
-                const totalPages = Math.ceil(total / allianceRowsPerPage) || 1;
-                if (allianceCurrentPage > totalPages) allianceCurrentPage = totalPages;
-                if (allianceCurrentPage < 1) allianceCurrentPage = 1;
-
-                const start = (allianceCurrentPage - 1) * allianceRowsPerPage;
-                const end = Math.min(start + allianceRowsPerPage, total);
-                const paginated = globalAllianceArray.slice(start, end);
-
-                paginated.forEach(a => {
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-950";
-                    row.innerHTML = `
-                        <td class="p-3 font-bold text-gray-200">${a.name === 'NONE' ? '<span class="text-gray-600 italic">[No Alliance]</span>' : a.name}</td>
-                        <td class="p-3 text-center font-mono">${a.players}</td>
-                        <td class="p-3 text-center font-bold text-emerald-400">${a.kills}</td>
-                        <td class="p-3 text-center font-bold text-red-400">${a.deaths}</td>
-                        <td class="p-3 text-right font-black font-mono text-gray-400">${formatCompactFame(a.fame)}</td>
-                    `;
-                    tbody.appendChild(row);
+                    processCombatant(killer, true);
+                    processCombatant(victim, false);
                 });
 
-                document.getElementById('alliance-start').innerText = total === 0 ? 0 : start + 1;
-                document.getElementById('alliance-end').innerText = end;
-                document.getElementById('alliance-total').innerText = total;
-                document.getElementById('btn-alliance-prev').disabled = (allianceCurrentPage === 1);
-                document.getElementById('btn-alliance-next').disabled = (allianceCurrentPage === totalPages);
-            }
+                // Flatten maps back into core operational arrays
+                globalPlayersArray = Array.from(playersMap.values());
 
-            // --- GUILD TABLE RENDERING SYSTEM ---
-            function changeGuildPage(direction) {
-                guildCurrentPage += direction;
+                globalGuildArray = Array.from(guildsMap.values()).map(g => ({
+                    name: g.name,
+                    alliance: g.alliance,
+                    players: g.uniquePlayers.size, // Converts specific player tracking set sizes to an index total
+                    kills: g.kills,
+                    deaths: g.deaths,
+                    fame: g.fame
+                }));
+
+                // Run layout adjustments 
+                populateFilterMenus(Array.from(uniqueGuilds), Array.from(uniqueAlliances));
+
+                // Clear current indices and trigger rendering tasks
+                guildCurrentPage = 1;
+                playerCurrentPage = 1;
                 renderGuildTable();
-            }
-
-            function renderGuildTable() {
-                const tbody = document.getElementById('guild-rows');
-                if(!tbody) return;
-                tbody.innerHTML = '';
-
-                const total = globalGuildArray.length;
-                const totalPages = Math.ceil(total / guildRowsPerPage) || 1;
-                if (guildCurrentPage > totalPages) guildCurrentPage = totalPages;
-                if (guildCurrentPage < 1) guildCurrentPage = 1;
-
-                const start = (guildCurrentPage - 1) * guildRowsPerPage;
-                const end = Math.min(start + guildRowsPerPage, total);
-                const paginated = globalGuildArray.slice(start, end);
-
-                paginated.forEach(g => {
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-950";
-                    row.innerHTML = `
-                        <td class="p-3 font-bold text-amber-400">${g.name}</td>
-                        <td class="p-3 font-medium text-gray-500">${g.alliance === 'NONE' ? '-' : g.alliance}</td>
-                        <td class="p-3 text-center font-mono">${g.players}</td>
-                        <td class="p-3 text-center font-bold text-emerald-400">${g.kills}</td>
-                        <td class="p-3 text-center font-bold text-red-400">${g.deaths}</td>
-                        <td class="p-3 text-right font-black font-mono text-gray-400">${formatCompactFame(g.fame)}</td>
-                    `;
-                    tbody.appendChild(row);
-                });
-
-                document.getElementById('guild-start').innerText = total === 0 ? 0 : start + 1;
-                document.getElementById('guild-end').innerText = end;
-                document.getElementById('guild-total').innerText = total;
-                document.getElementById('btn-guild-prev').disabled = (guildCurrentPage === 1);
-                document.getElementById('btn-guild-next').disabled = (guildCurrentPage === totalPages);
-            }
-
-            // --- FILTER SELECTION DROPDOWN POPULATION MODULE ---
-            function populateFilterMenus(guildsList, alliancesList) {
-                const guildContainer = document.getElementById('guild-checkbox-list');
-                const allianceContainer = document.getElementById('alliance-checkbox-list');
-                if(!guildContainer || !allianceContainer) return;
-
-                guildContainer.innerHTML = '';
-                allianceContainer.innerHTML = '';
-
-                guildsList.sort().forEach(gName => {
-                    const label = document.createElement('label');
-                    label.className = "flex items-center gap-2 cursor-pointer hover:text-amber-400 py-0.5 select-none";
-                    label.innerHTML = `
-                        <input type="checkbox" value="${gName}" class="accent-amber-500 rounded border-gray-800 bg-gray-900 focus:ring-0">
-                        <span class="truncate">${gName}</span>
-                    `;
-                    label.querySelector('input').addEventListener('change', function() {
-                        if (this.checked) selectedGuilds.add(gName);
-                        else selectedGuilds.delete(gName);
-                        playerCurrentPage = 1; 
-                        renderPlayerTable();
-                    });
-                    guildContainer.appendChild(label);
-                });
-
-                alliancesList.sort().forEach(aTag => {
-                    const displayName = aTag === 'NONE' ? '[No Alliance]' : aTag;
-                    const label = document.createElement('label');
-                    label.className = "flex items-center gap-2 cursor-pointer hover:text-amber-400 py-0.5 select-none";
-                    label.innerHTML = `
-                        <input type="checkbox" value="${aTag}" class="accent-amber-500 rounded border-gray-800 bg-gray-900 focus:ring-0">
-                        <span class="truncate">${displayName}</span>
-                    `;
-                    label.querySelector('input').addEventListener('change', function() {
-                        if (this.checked) selectedAlliances.add(aTag);
-                        else selectedAlliances.delete(aTag);
-                        playerCurrentPage = 1; 
-                        renderPlayerTable();
-                    });
-                    allianceContainer.appendChild(label);
-                });
-            }
-
-            function clearFilterSelection(type, event) {
-                event.stopPropagation();
-                if (type === 'guild') {
-                    selectedGuilds.clear();
-                    document.querySelectorAll('#guild-checkbox-list input').forEach(cb => cb.checked = false);
-                } else {
-                    selectedAlliances.clear();
-                    document.querySelectorAll('#alliance-checkbox-list input').forEach(cb => cb.checked = false);
-                }
-                playerCurrentPage = 1; 
                 renderPlayerTable();
+
+                // Clear defaults on sort styles graphic arrows
+                const fameIcon = document.getElementById('sort-icon-fame');
+                if(fameIcon) fameIcon.className = "fas fa-sort-down text-[11px] text-amber-500";
+
+            } catch (err) {
+                console.error("Data Parser Runtime Halt:", err);
+                renderErrorState("Failed to build grid context structures from raw JSON data: " + err.message);
             }
+        }
 
-            function toggleSort(columnKey) {
-                if (activeSortColumn === columnKey) {
-                    isDescending = !isDescending; 
-                } else {
-                    activeSortColumn = columnKey;
-                    isDescending = true; 
-                }
+        // --- SAMPLE LIVE INGEST DATA PACKET ATTACHMENT ---
+        window.rawBattleboardData = [{
+            "numberOfParticipants": 1,
+            "groupMemberCount": 1,
+            "EventId": 1388289823,
+            "TimeStamp": "2026-05-18T13:07:45.389801900Z",
+            "Version": 4,
+            "Killer": {
+                "AverageItemPower": 1037.16089,
+                "Equipment": { "MainHand": { "Type": "T5_2H_HAMMER_UNDEAD@1" } },
+                "Inventory": [],
+                "Name": "NiltonAutopecas",
+                "GuildName": "NoFreeThinkers",
+                "GuildId": "AIbIw4erSVyHg9Ab6LVtdA",
+                "AllianceName": "H1VE",
+                "AllianceId": "1w7s5SGaQbqzwhg7Nj0rQA",
+                "KillFame": 78372
+            },
+            "Victim": {
+                "AverageItemPower": 1057.08752,
+                "Equipment": { "MainHand": { "Type": "T5_2H_DUALAXE_KEEPER@2" } },
+                "Inventory": [],
+                "Name": "vitaosx",
+                "GuildName": "ROLF OFICIAL",
+                "GuildId": "qQZcTDawQza-Djf0xEDnRw",
+                "AllianceName": "", // Test empty string structural trap case
+                "AllianceId": "",
+                "DeathFame": 78372
+            },
+            "TotalVictimKillFame": 78372,
+            "BattleId": 1388289823,
+            "KillArea": "OPEN_WORLD",
+            "Type": "KILL"
+        }];
 
-                ['kills', 'deaths', 'fame'].forEach(col => {
-                    const icon = document.getElementById(`sort-icon-${col}`);
-                    if(icon) icon.className = "fas fa-sort text-[10px] text-gray-600";
-                });
-
-                const targetedIcon = document.getElementById(`sort-icon-${columnKey}`);
-                if(targetedIcon) {
-                    targetedIcon.className = isDescending ? "fas fa-sort-down text-[11px] text-amber-500" : "fas fa-sort-up text-[11px] text-amber-500";
-                }
-
-                playerCurrentPage = 1; 
-                renderPlayerTable();
-            }
-
-            function changePage(direction) {
-                playerCurrentPage += direction;
-                renderPlayerTable();
-            }
-
-            function goToPage(pageNum) {
-                playerCurrentPage = pageNum;
-                renderPlayerTable();
-            }
-
-            function renderPlayerTable() {
-                const playerTbody = document.getElementById('player-rows');
-                if(!playerTbody) return;
-                playerTbody.innerHTML = ''; 
-
-                let processedList = [...globalPlayersArray];
-
-                if (selectedGuilds.size > 0) {
-                    processedList = processedList.filter(p => selectedGuilds.has(p.guildName));
-                }
-                if (selectedAlliances.size > 0) {
-                    processedList = processedList.filter(p => selectedAlliances.has(p.allianceName));
-                }
-
-                processedList.sort((a, b) => {
-                    return isDescending ? (b[activeSortColumn] - a[activeSortColumn]) : (a[activeSortColumn] - b[activeSortColumn]);
-                });
-
-                const totalEntries = processedList.length;
-
-                if (totalEntries === 0) {
-                    playerTbody.innerHTML = `
-                        <tr>
-                            <td colspan="6" class="p-8 text-center text-xs text-gray-600 italic tracking-wide">
-                                No combatant records match your specific checkbox selections.
-                            </td>
-                        </tr>`;
-                    
-                    document.getElementById('pagination-start').innerText = '0';
-                    document.getElementById('pagination-end').innerText = '0';
-                    document.getElementById('pagination-total').innerText = '0';
-                    document.getElementById('btn-prev-page').disabled = true;
-                    document.getElementById('btn-next-page').disabled = true;
-                    document.getElementById('pagination-numbers').innerHTML = '';
-                    return;
-                }
-
-                const totalPages = Math.ceil(totalEntries / playerRowsPerPage);
-                if (playerCurrentPage > totalPages) playerCurrentPage = totalPages;
-                if (playerCurrentPage < 1) playerCurrentPage = 1;
-
-                const startIndex = (playerCurrentPage - 1) * playerRowsPerPage;
-                const endIndex = Math.min(startIndex + playerRowsPerPage, totalEntries);
-                const paginatedList = processedList.slice(startIndex, endIndex);
-
-                paginatedList.forEach(p => {
-                    const allianceTag = p.allianceName === 'NONE' ? "-" : p.allianceName;
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/40";
-                    row.innerHTML = `
-                        <td class="p-4 font-bold text-gray-100 flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500"></span>
-                            ${p.name}
-                        </td>
-                        <td class="p-4 text-gray-300 font-medium">${p.guildName}</td>
-                        <td class="p-4 text-xs font-mono font-bold text-gray-500">${allianceTag}</td>
-                        <td class="p-4 text-center font-black text-emerald-400 font-mono text-sm">${p.kills}</td>
-                        <td class="p-4 text-center font-black text-red-400 font-mono text-sm">${p.deaths}</td>
-                        <td class="p-4 text-right font-black text-amber-400 font-mono">${formatCompactFame(p.fame)}</td>
-                    `;
-                    playerTbody.appendChild(row);
-                });
-
-                document.getElementById('pagination-start').innerText = startIndex + 1;
-                document.getElementById('pagination-end').innerText = endIndex;
-                document.getElementById('pagination-total').innerText = totalEntries;
-
-                document.getElementById('btn-prev-page').disabled = (playerCurrentPage === 1);
-                document.getElementById('btn-next-page').disabled = (playerCurrentPage === totalPages);
-
-                const numContainer = document.getElementById('pagination-numbers');
-                if(!numContainer) return;
-                numContainer.innerHTML = '';
-
-                for (let i = 1; i <= totalPages; i++) {
-                    if (totalPages > 5 && i !== 1 && i !== totalPages && Math.abs(i - playerCurrentPage) > 1) {
-                        if (i === 2 && playerCurrentPage > 3) {
-                            const dots = document.createElement('span');
-                            dots.className = "px-1.5 text-gray-600";
-                            dots.innerText = "...";
-                            numContainer.appendChild(dots);
-                            i = playerCurrentPage - 2;
-                        } else if (i === playerCurrentPage + 1 && playerCurrentPage < totalPages - 2) {
-                            const dots = document.createElement('span');
-                            dots.className = "px-1.5 text-gray-600";
-                            dots.innerText = "...";
-                            numContainer.appendChild(dots);
-                            i = totalPages - 1;
-                        }
-                        continue;
-                    }
-
-                    const pageBtn = document.createElement('button');
-                    pageBtn.innerText = i;
-                    if (i === playerCurrentPage) {
-                        pageBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-gray-950 font-bold shadow-sm shadow-amber-500/20";
-                    } else {
-                        pageBtn.className = "px-2.5 py-1 rounded-md bg-gray-900 border border-gray-800 text-gray-400 hover:text-amber-400 font-medium transition-colors";
-                        pageBtn.onclick = () => goToPage(i);
-                    }
-                    numContainer.appendChild(pageBtn);
-                }
-            }
-
-            function renderErrorState(customErrorMessage) {
-                const errText = document.getElementById('error-message-text');
-                if(errText) errText.innerText = customErrorMessage;
-                
-                if(document.getElementById('detail-loading')) document.getElementById('detail-loading').classList.add('hidden');
-                if(document.getElementById('detail-content')) document.getElementById('detail-content').classList.add('hidden');
-                if(document.getElementById('error-panel')) document.getElementById('error-panel').classList.remove('hidden');
-            }
-
-            // Initialize execution on runtime
-            processBattleboardDeconstruction();
+        // Initialize execution on runtime
+        processBattleboardDeconstruction();
     </script>
 </body>
 </html>
