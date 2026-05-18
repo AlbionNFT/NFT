@@ -341,7 +341,7 @@
         function getQueryBattleId() {
             const params = new URLSearchParams(window.location.search);
             // Checks for ?EventId= or ?BattleId= in the URL string
-            return params.get('EventId') || params.get('BattleId');
+            return params.get('EventId') || params.get('id') || params.get('BattleId');
 
         }
 
