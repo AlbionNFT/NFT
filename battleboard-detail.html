@@ -3,7 +3,7 @@
 <head>
  <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Battle Analytics | NoFreeThinkers</title>
+    <title>Single-Battle Analytics | NoFreeThinkers</title>
     
     <meta property="og:title" content="🛡️ No Free Thinkers | Live Battle Summary" />
     <meta property="og:type" content="website" />
@@ -291,7 +291,7 @@
         </div>
     </footer>
 
-    <script>
+<script>
         const githubUser = 'AlbionNFT';
         const repoName = 'NFT'; 
         const localJsonUrl = `/battle-data.json?t=${Date.now()}`;
@@ -351,12 +351,29 @@
         }
 
         window.addEventListener('click', () => {
-            document.getElementById('guild-dropdown').classList.add('hidden');
-            document.getElementById('alliance-dropdown').classList.add('hidden');
+            if (document.getElementById('guild-dropdown')) document.getElementById('guild-dropdown').classList.add('hidden');
+            if (document.getElementById('alliance-dropdown')) document.getElementById('alliance-dropdown').classList.add('hidden');
         });
 
-        document.getElementById('guild-dropdown').addEventListener('click', (e) => e.stopPropagation());
-        document.getElementById('alliance-dropdown').addEventListener('click', (e) => e.stopPropagation());
+        // Safe attachment of click stopPropagation helpers once elements exist
+        document.addEventListener('DOMContentLoaded', () => {
+            const gd = document.getElementById('guild-dropdown');
+            const ad = document.getElementById('alliance-dropdown');
+            if (gd) gd.addEventListener('click', (e) => e.stopPropagation());
+            if (ad) ad.addEventListener('click', (e) => e.stopPropagation());
+        });
+
+        // Dynamic uniform profile constructor helper
+        function createEmptyPlayerProfile(apiData) {
+            return {
+                name: apiData.Name || "Unknown Combatant",
+                guildName: apiData.GuildName && apiData.GuildName.trim() !== "" ? apiData.GuildName : "Unknown Guild",
+                allianceName: apiData.AllianceName && apiData.AllianceName.trim() !== "" ? apiData.AllianceName.toUpperCase() : "NONE",
+                kills: 0,
+                deaths: 0,
+                fame: 0
+            };
+        }
 
         async function processBattleboardDeconstruction() {
             const battleIdStr = getQueryBattleId();
@@ -368,28 +385,59 @@
             try {
                 const res = await fetch(localJsonUrl);
                 if (!res.ok) throw new Error(`HTTP payload breakdown: ${res.status}`);
-                const battles = await res.json();
+                const events = await res.json();
 
-                const battle = battles.find(b => String(b.id) === String(battleIdStr));
-                if (!battle) {
+                // Filter events matching the target URL argument either via BattleId or EventId fallback
+                const battleEvents = events.filter(e => 
+                    String(e.BattleId) === String(battleIdStr) || String(e.EventId) === String(battleIdStr)
+                );
+
+                if (battleEvents.length === 0) {
                     renderErrorState(`Battle record context token #${battleIdStr} doesn't exist.`);
                     return;
                 }
 
-                document.getElementById('header-battle-id').innerText = `#${battle.id}`;
-                document.getElementById('header-battle-time').innerText = formatUtcTimestamp(battle.startTime);
+                // Reference properties from the initial event node
+                const referenceEvent = battleEvents[0];
+                document.getElementById('header-battle-id').innerText = `#${referenceEvent.BattleId || referenceEvent.EventId}`;
+                document.getElementById('header-battle-time').innerText = formatUtcTimestamp(referenceEvent.TimeStamp);
 
-                const rawPlayersArray = battle.players ? Object.values(battle.players) : [];
-                
-                globalPlayersArray = rawPlayersArray.map(p => ({
-                    name: p.name || "Unknown Combatant",
-                    guildName: p.guildName || "Unknown Guild",
-                    allianceName: p.allianceName && p.allianceName.trim() !== "" ? p.allianceName.toUpperCase() : "NONE",
-                    kills: p.kills || 0,
-                    deaths: p.deaths || 0,
-                    fame: p.killFame || 0
-                }));
+                // Aggregate structural entities out of single combat event nodes
+                let playerAggregationMap = {};
 
+                battleEvents.forEach(event => {
+                    // Process Killer metrics
+                    if (event.Killer && event.Killer.Id) {
+                        const kId = event.Killer.Id;
+                        if (!playerAggregationMap[kId]) {
+                            playerAggregationMap[kId] = createEmptyPlayerProfile(event.Killer);
+                        }
+                        playerAggregationMap[kId].kills += 1;
+                        playerAggregationMap[kId].fame += (event.TotalVictimKillFame || 0);
+                    }
+
+                    // Process Victim metrics
+                    if (event.Victim && event.Victim.Id) {
+                        const vId = event.Victim.Id;
+                        if (!playerAggregationMap[vId]) {
+                            playerAggregationMap[vId] = createEmptyPlayerProfile(event.Victim);
+                        }
+                        playerAggregationMap[vId].deaths += 1;
+                    }
+
+                    // Process Assistant / Participant metrics
+                    if (event.Participants && Array.isArray(event.Participants)) {
+                        event.Participants.forEach(p => {
+                            if (p.Id) {
+                                if (!playerAggregationMap[p.Id]) {
+                                    playerAggregationMap[p.Id] = createEmptyPlayerProfile(p);
+                                }
+                            }
+                        });
+                    }
+                });
+
+                globalPlayersArray = Object.values(playerAggregationMap);
                 document.getElementById('player-count-badge').innerText = `${globalPlayersArray.length} Combatants Logged`;
 
                 let allianceMap = {};
@@ -413,13 +461,11 @@
                     guildMap[p.guildName].fame += p.fame;
                 });
 
-                // Generate operational tracking structures for secondary boards
                 globalAllianceArray = Object.values(allianceMap).sort((a,b) => b.fame - a.fame);
                 globalGuildArray = Object.values(guildMap).sort((a,b) => b.fame - a.fame);
 
                 populateFilterMenus(Object.keys(guildMap), Object.keys(allianceMap));
                 
-                // Comprehensive operational baseline render
                 renderAllianceTable();
                 renderGuildTable();
                 renderPlayerTable();
@@ -441,6 +487,7 @@
 
         function renderAllianceTable() {
             const tbody = document.getElementById('alliance-rows');
+            if(!tbody) return;
             tbody.innerHTML = '';
             
             const total = globalAllianceArray.length;
@@ -480,6 +527,7 @@
 
         function renderGuildTable() {
             const tbody = document.getElementById('guild-rows');
+            if(!tbody) return;
             tbody.innerHTML = '';
 
             const total = globalGuildArray.length;
@@ -516,6 +564,10 @@
         function populateFilterMenus(guildsList, alliancesList) {
             const guildContainer = document.getElementById('guild-checkbox-list');
             const allianceContainer = document.getElementById('alliance-checkbox-list');
+            if(!guildContainer || !allianceContainer) return;
+
+            guildContainer.innerHTML = '';
+            allianceContainer.innerHTML = '';
 
             guildsList.sort().forEach(gName => {
                 const label = document.createElement('label');
@@ -573,11 +625,14 @@
             }
 
             ['kills', 'deaths', 'fame'].forEach(col => {
-                document.getElementById(`sort-icon-${col}`).className = "fas fa-sort text-[10px] text-gray-600";
+                const icon = document.getElementById(`sort-icon-${col}`);
+                if(icon) icon.className = "fas fa-sort text-[10px] text-gray-600";
             });
 
             const targetedIcon = document.getElementById(`sort-icon-${columnKey}`);
-            targetedIcon.className = isDescending ? "fas fa-sort-down text-[11px] text-amber-500" : "fas fa-sort-up text-[11px] text-amber-500";
+            if(targetedIcon) {
+                targetedIcon.className = isDescending ? "fas fa-sort-down text-[11px] text-amber-500" : "fas fa-sort-up text-[11px] text-amber-500";
+            }
 
             playerCurrentPage = 1; 
             renderPlayerTable();
@@ -595,6 +650,7 @@
 
         function renderPlayerTable() {
             const playerTbody = document.getElementById('player-rows');
+            if(!playerTbody) return;
             playerTbody.innerHTML = ''; 
 
             let processedList = [...globalPlayersArray];
@@ -635,7 +691,7 @@
 
             const startIndex = (playerCurrentPage - 1) * playerRowsPerPage;
             const endIndex = Math.min(startIndex + playerRowsPerPage, totalEntries);
-            const paginatedList = processedList.slice(startIndex, startIndex + playerRowsPerPage);
+            const paginatedList = processedList.slice(startIndex, endIndex);
 
             paginatedList.forEach(p => {
                 const allianceTag = p.allianceName === 'NONE' ? "-" : p.allianceName;
@@ -663,6 +719,7 @@
             document.getElementById('btn-next-page').disabled = (playerCurrentPage === totalPages);
 
             const numContainer = document.getElementById('pagination-numbers');
+            if(!numContainer) return;
             numContainer.innerHTML = '';
 
             for (let i = 1; i <= totalPages; i++) {
@@ -696,13 +753,16 @@
         }
 
         function renderErrorState(customErrorMessage) {
-            document.getElementById('error-message-text').innerText = customErrorMessage;
-            document.getElementById('detail-loading').classList.add('hidden');
-            document.getElementById('detail-content').classList.add('hidden');
-            document.getElementById('error-panel').classList.remove('hidden');
+            const errText = document.getElementById('error-message-text');
+            if(errText) errText.innerText = customErrorMessage;
+            
+            if(document.getElementById('detail-loading')) document.getElementById('detail-loading').classList.add('hidden');
+            if(document.getElementById('detail-content')) document.getElementById('detail-content').classList.add('hidden');
+            if(document.getElementById('error-panel')) document.getElementById('error-panel').classList.remove('hidden');
         }
 
+        // Initialize execution on runtime
         processBattleboardDeconstruction();
-    </script>
+</script>
 </body>
 </html>
