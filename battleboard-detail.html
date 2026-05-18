@@ -29,7 +29,7 @@
                 // - embed=screenshot.url: Returns the raw binary image stream Discord needs
                 // - element=%23alliance-summary-card: Target just your element (#alliance-summary-card)
                 // - waitFor=3000: Gives your client-side JavaScript 3 full seconds to fetch json and render rows
-                const captureService = `https://api.microlink.io/?url=${encodedUrl}&screenshot=true&embed=screenshot.url&element=%23alliance-summary-card&waitFor=3000`;
+                const captureService = `https://api.microlink.io/?url=${encodedUrl}&screenshot=true&embed=screenshot.url&element=%23alliance-summary-card&waitFor=5000`;
                 
                 ogImage.setAttribute('content', captureService);
                 document.head.appendChild(ogImage);

@@ -12,34 +12,41 @@
 
     <script>
         (function() {
-            // 1. Grab whatever IDs are currently in the address bar (handles single or multiple)
+            // 1. Capture the exact link address in the browser bar
             const currentUrl = window.location.href;
             const params = new URLSearchParams(window.location.search);
             const ids = params.get('ids');
 
             if (ids) {
-                // 2. Create the Open Graph Image tag dynamically
                 const ogImage = document.createElement('meta');
                 ogImage.setAttribute('property', 'og:image');
 
-                // 3. Pass the full page URL to a free automated rendering engine.
-                // The 'selector=#alliance-summary-card' instructs it to ignore the rest of the site and capture ONLY your table.
-                // 'delay=2500' gives your Javascript file plenty of time to fetch data and compile the table first!
+                // 2. Encode your page URL safely
                 const encodedUrl = encodeURIComponent(currentUrl);
-                const captureService = `https://render-tron.appspot.com/screenshot/${encodedUrl}?selector=%23alliance-summary-card&delay=2500`;
+                
+                // 3. Formulate the Microlink configuration URL:
+                // - screenshot=true: Tell it to yield an image instead of metadata
+                // - embed=screenshot.url: Returns the raw binary image stream Discord needs
+                // - element=%23alliance-summary-card: Target just your element (#alliance-summary-card)
+                // - waitFor=3000: Gives your client-side JavaScript 3 full seconds to fetch json and render rows
+                const captureService = `https://api.microlink.io/?url=${encodedUrl}&screenshot=true&embed=screenshot.url&element=%23alliance-summary-card&waitFor=5000`;
                 
                 ogImage.setAttribute('content', captureService);
                 document.head.appendChild(ogImage);
                 
-                // Set explicit dimensions so Discord allocates the space nicely
+                // Formulate size helpers so Discord shapes the frame window early
                 const ogImageWidth = document.createElement('meta');
                 ogImageWidth.setAttribute('property', 'og:image:width');
-                ogImageWidth.setAttribute('content', '650');
+                ogImageWidth.setAttribute('content', '1200');
                 document.head.appendChild(ogImageWidth);
+
+                const ogImageHeight = document.createElement('meta');
+                ogImageHeight.setAttribute('property', 'og:image:height');
+                ogImageHeight.setAttribute('content', '630');
+                document.head.appendChild(ogImageHeight);
             }
         })();
     </script>
-
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
