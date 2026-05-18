@@ -4,53 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Battle Analytics | NoFreeThinkers</title>
-    
-    <meta property="og:title" content="No Free Thinkers | Multiple Battleboard" />
-    <meta property="og:type" content="website" />
-    <meta property="og:description" content="Aggregated Battle Report - Live Alliance & Combat Performance Tallies." />
-    <meta name="theme-color" content="#fbbf24" />
-
-    <script>
-        (function() {
-            // 1. Check if the entity loading the page is a crawler bot or an automated service
-            const ua = navigator.userAgent.toLowerCase();
-            const isBot = /discordbot|twitterbot|slackbot|whatsapp|telegram|embedly|facebookexternalhit|microlink/i.test(ua);
-            
-            // 2. Also check if this is Microlink rendering the background window
-            const isMicrolinkContext = window.location.href.includes('microlink.io');
-
-            const params = new URLSearchParams(window.location.search);
-            const ids = params.get('ids');
-
-            // ONLY run this tag injection if it's a bot trying to generate an embed preview
-            if (ids && (isBot || isMicrolinkContext)) {
-                const ogImage = document.createElement('meta');
-                ogImage.setAttribute('property', 'og:image');
-
-                // Clear out any messy trailing query tokens to give Microlink a clean target URL
-                const baseTargetUrl = window.location.origin + window.location.pathname + '?ids=' + ids;
-                const encodedUrl = encodeURIComponent(baseTargetUrl);
-                
-                // Configured with a 4.5s delay + targets your summary card component explicitly
-                const captureService = `https://api.microlink.io/?url=${encodedUrl}&screenshot=true&embed=screenshot.url&element=%23alliance-summary-card&waitFor=4500`;
-                
-                ogImage.setAttribute('content', captureService);
-                document.head.appendChild(ogImage);
-                
-                // Pre-shape frame sizing targets
-                const ogImageWidth = document.createElement('meta');
-                ogImageWidth.setAttribute('property', 'og:image:width');
-                ogImageWidth.setAttribute('content', '1200');
-                document.head.appendChild(ogImageWidth);
-
-                const ogImageHeight = document.createElement('meta');
-                ogImageHeight.setAttribute('property', 'og:image:height');
-                ogImageHeight.setAttribute('content', '630');
-                document.head.appendChild(ogImageHeight);
-            }
-        })();
-    </script>
-
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -61,7 +14,7 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
         .glass-nav {
-            background: rgba(15, 23, 42, 0.7);      
+            background: rgba(15, 23, 42, 0.7);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -155,7 +108,7 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                 <div id="alliance-summary-card" class="glass-panel rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between">
+                <div class="glass-panel rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between">
                     <div>
                         <div class="p-4 bg-gray-950/40 border-b border-gray-800/60 flex items-center justify-between">
                             <span class="text-xs font-black uppercase tracking-wider text-amber-400">Alliances Summary</span>
@@ -707,4 +660,4 @@
         processMultiBattleAggregation();
     </script>
 </body>
-</html>                 
+</html>
