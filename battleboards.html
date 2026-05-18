@@ -91,13 +91,13 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                         <div class="flex items-center space-x-2 bg-gray-950/60 border border-gray-800 px-3 py-1.5 rounded-lg text-xs">
-                            <span class="text-gray-400 font-medium"><i class="fas fa-filter mr-1 text-amber-500/80"></i> Min Players:</span>
+                            <span class="text-gray-400 font-medium"><i class="fas fa-filter mr-1 text-amber-500/80"></i> Min Total Players:</span>
                             <select id="filter-min-players" onchange="handleFilterChange()" class="bg-transparent text-amber-400 font-bold focus:outline-none cursor-pointer pr-2">
                                 <option value="0" class="bg-gray-950 text-gray-300">All Battles</option>
-                                <option value="5" class="bg-gray-950 text-gray-300">5+ Players</option>
-                                <option value="10" class="bg-gray-950 text-gray-300">10+ Players</option>
-                                <option value="15" class="bg-gray-950 text-gray-300">15+ Players</option>
-                                <option value="20" class="bg-gray-950 text-gray-300">20+ Players</option>
+                                <option value="5" class="bg-gray-950 text-gray-300">5+ Total Players</option>
+                                <option value="10" class="bg-gray-950 text-gray-300">10+ Total Players</option>
+                                <option value="15" class="bg-gray-950 text-gray-300">15+ Total Players</option>
+                                <option value="20" class="bg-gray-950 text-gray-300">20+ Total Players</option>
                             </select>
                         </div>
                         <span class="bg-amber-500/10 text-amber-400 text-xs px-3 py-1.5 rounded-lg font-semibold border border-amber-500/20 whitespace-nowrap">
@@ -218,20 +218,15 @@
         } catch(e) { return "Recent Match"; }
     }
 
-    // Converts individual kill events into grouped battle summaries expected by your UI
     function groupEventsIntoBattles(events) {
         if (!Array.isArray(events)) return [];
 
-        // For this implementation, we map each prominent kill script cluster or event to a unique table row.
-        // If your JSON contains data over multiple hours, this structures them cleanly.
         return events.map(event => {
             const battleId = event.EventId;
             const startTime = event.TimeStamp;
             
-            // Build an internal structured player map to support your existing min-player filters
             const players = {};
 
-            // Add the Killer
             if (event.Killer) {
                 players[event.Killer.Id] = {
                     guildId: event.Killer.GuildId,
@@ -242,7 +237,6 @@
                 };
             }
 
-            // Add the Victim
             if (event.Victim) {
                 if (players[event.Victim.Id]) {
                     players[event.Victim.Id].deaths = event.Victim.GuildId === TARGET_GUILD_ID ? 1 : 0;
@@ -257,7 +251,6 @@
                 }
             }
 
-            // Add assist participants
             if (Array.isArray(event.Participants)) {
                 event.Participants.forEach(p => {
                     if (players[p.Id]) {
@@ -292,15 +285,12 @@
             filteredBattles = [...allBattlesCache];
         } else {
             filteredBattles = allBattlesCache.filter(battle => {
-                let guildPlayerCount = 0;
+                let totalPlayerCount = 0;
                 if (battle.players) {
-                    Object.values(battle.players).forEach(player => {
-                        if (player.guildId === TARGET_GUILD_ID) {
-                            guildPlayerCount++;
-                        }
-                    });
+                    // Counts total unique player IDs associated across the entire combat log structure
+                    totalPlayerCount = Object.keys(battle.players).length;
                 }
-                return guildPlayerCount >= minPlayers;
+                return totalPlayerCount >= minPlayers;
             });
         }
     }
@@ -438,7 +428,6 @@
             if (!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
             let rawData = await res.json();
             
-            // Map the raw event payloads to the internal battle model structure
             let parsedData = groupEventsIntoBattles(rawData);
             
             if (Array.isArray(parsedData)) {
