@@ -12,29 +12,32 @@
 
     <script>
         (function() {
-            // 1. Capture the exact link address in the browser bar
-            const currentUrl = window.location.href;
+            // 1. Check if the entity loading the page is a crawler bot or an automated service
+            const ua = navigator.userAgent.toLowerCase();
+            const isBot = /discordbot|twitterbot|slackbot|whatsapp|telegram|embedly|facebookexternalhit|microlink/i.test(ua);
+            
+            // 2. Also check if this is Microlink rendering the background window
+            const isMicrolinkContext = window.location.href.includes('microlink.io');
+
             const params = new URLSearchParams(window.location.search);
             const ids = params.get('ids');
 
-            if (ids) {
+            // ONLY run this tag injection if it's a bot trying to generate an embed preview
+            if (ids && (isBot || isMicrolinkContext)) {
                 const ogImage = document.createElement('meta');
                 ogImage.setAttribute('property', 'og:image');
 
-                // 2. Encode your page URL safely
-                const encodedUrl = encodeURIComponent(currentUrl);
+                // Clear out any messy trailing query tokens to give Microlink a clean target URL
+                const baseTargetUrl = window.location.origin + window.location.pathname + '?ids=' + ids;
+                const encodedUrl = encodeURIComponent(baseTargetUrl);
                 
-                // 3. Formulate the Microlink configuration URL:
-                // - screenshot=true: Tell it to yield an image instead of metadata
-                // - embed=screenshot.url: Returns the raw binary image stream Discord needs
-                // - element=%23alliance-summary-card: Target just your element (#alliance-summary-card)
-                // - waitFor=3000: Gives your client-side JavaScript 3 full seconds to fetch json and render rows
-                const captureService = `https://api.microlink.io/?url=${encodedUrl}&screenshot=true&embed=screenshot.url&element=%23alliance-summary-card&waitFor=5000`;
+                // Configured with a 4.5s delay + targets your summary card component explicitly
+                const captureService = `https://api.microlink.io/?url=${encodedUrl}&screenshot=true&embed=screenshot.url&element=%23alliance-summary-card&waitFor=4500`;
                 
                 ogImage.setAttribute('content', captureService);
                 document.head.appendChild(ogImage);
                 
-                // Formulate size helpers so Discord shapes the frame window early
+                // Pre-shape frame sizing targets
                 const ogImageWidth = document.createElement('meta');
                 ogImageWidth.setAttribute('property', 'og:image:width');
                 ogImageWidth.setAttribute('content', '1200');
@@ -47,6 +50,7 @@
             }
         })();
     </script>
+
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
