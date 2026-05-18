@@ -182,211 +182,286 @@
     </footer>
 
     <script>
-        const TARGET_GUILD_ID = "AIbIw4erSVyHg9Ab6LVtdA";
-        
-        const githubUser = 'AlbionNFT';
-        const repoName = 'NFT'; 
-        const localJsonUrl = `battle-data.json?t=${Date.now()}`;
+    const TARGET_GUILD_ID = "AIbIw4erSVyHg9Ab6LVtdA";
+    
+    const githubUser = 'AlbionNFT';
+    const repoName = 'NFT'; 
+    const localJsonUrl = `battle-data.json?t=${Date.now()}`;
 
-        let allBattlesCache = [];
-        let filteredBattles = []; // Cache to hold processed filters
-        let currentPage = 1;
-        const rowsPerPage = 15;
+    let allBattlesCache = [];
+    let filteredBattles = []; 
+    let currentPage = 1;
+    const rowsPerPage = 15;
 
-        let selectedBattleIds = new Set();
+    let selectedBattleIds = new Set();
 
-        function formatCompactFame(num) {
-            if (!num || isNaN(num)) return "0";
-            const val = parseFloat(num);
-            if (val >= 1e12) return (val / 1e12).toFixed(2) + 'T';
-            if (val >= 1e9) return (val / 1e9).toFixed(2) + 'B';
-            if (val >= 1e6) return (val / 1e6).toFixed(2) + 'M';
-            return val.toLocaleString();
-        }
+    function formatCompactFame(num) {
+        if (!num || isNaN(num)) return "0";
+        const val = parseFloat(num);
+        if (val >= 1e12) return (val / 1e12).toFixed(2) + 'T';
+        if (val >= 1e9) return (val / 1e9).toFixed(2) + 'B';
+        if (val >= 1e6) return (val / 1e6).toFixed(2) + 'M';
+        return val.toLocaleString();
+    }
 
-        function formatDateString(isoString) {
-            try {
-                const d = new Date(isoString);
-                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const month = months[d.getUTCMonth()]; 
-                const day = d.getUTCDate();
-                
-                const hours = String(d.getUTCHours()).padStart(2, '0');
-                const minutes = String(d.getUTCMinutes()).padStart(2, '0');
-                
-                return `${month} ${day}, ${hours}:${minutes} UTC`;
-            } catch(e) { return "Recent Match"; }
-        }
-
-        // Apply filters based on minimum player selection
-        function applyFilters() {
-            const minPlayers = parseInt(document.getElementById('filter-min-players').value, 10);
+    function formatDateString(isoString) {
+        try {
+            const d = new Date(isoString);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = months[d.getUTCMonth()]; 
+            const day = d.getUTCDate();
             
-            if (minPlayers === 0) {
-                filteredBattles = [...allBattlesCache];
-            } else {
-                filteredBattles = allBattlesCache.filter(battle => {
-                    let guildPlayerCount = 0;
-                    if (battle.players) {
-                        Object.values(battle.players).forEach(player => {
-                            if (player.guildId === TARGET_GUILD_ID) {
-                                guildPlayerCount++;
-                            }
-                        });
+            const hours = String(d.getUTCHours()).padStart(2, '0');
+            const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+            
+            return `${month} ${day}, ${hours}:${minutes} UTC`;
+        } catch(e) { return "Recent Match"; }
+    }
+
+    // Converts individual kill events into grouped battle summaries expected by your UI
+    function groupEventsIntoBattles(events) {
+        if (!Array.isArray(events)) return [];
+
+        // For this implementation, we map each prominent kill script cluster or event to a unique table row.
+        // If your JSON contains data over multiple hours, this structures them cleanly.
+        return events.map(event => {
+            const battleId = event.EventId;
+            const startTime = event.TimeStamp;
+            
+            // Build an internal structured player map to support your existing min-player filters
+            const players = {};
+
+            // Add the Killer
+            if (event.Killer) {
+                players[event.Killer.Id] = {
+                    guildId: event.Killer.GuildId,
+                    guildName: event.Killer.GuildName,
+                    kills: event.Killer.GuildId === TARGET_GUILD_ID ? 1 : 0,
+                    deaths: 0,
+                    killFame: event.TotalVictimKillFame || 0 
+                };
+            }
+
+            // Add the Victim
+            if (event.Victim) {
+                if (players[event.Victim.Id]) {
+                    players[event.Victim.Id].deaths = event.Victim.GuildId === TARGET_GUILD_ID ? 1 : 0;
+                } else {
+                    players[event.Victim.Id] = {
+                        guildId: event.Victim.GuildId,
+                        guildName: event.Victim.GuildName,
+                        kills: 0,
+                        deaths: event.Victim.GuildId === TARGET_GUILD_ID ? 1 : 0,
+                        killFame: 0
+                    };
+                }
+            }
+
+            // Add assist participants
+            if (Array.isArray(event.Participants)) {
+                event.Participants.forEach(p => {
+                    if (players[p.Id]) {
+                        if (p.GuildId === TARGET_GUILD_ID && event.Killer?.Id === p.Id) {
+                            players[p.Id].kills = 1;
+                        }
+                    } else {
+                        players[p.Id] = {
+                            guildId: p.GuildId,
+                            guildName: p.GuildName,
+                            kills: (p.GuildId === TARGET_GUILD_ID && event.Killer?.Id === p.Id) ? 1 : 0,
+                            deaths: 0,
+                            killFame: 0
+                        };
                     }
-                    return guildPlayerCount >= minPlayers;
                 });
             }
-        }
 
-        function handleFilterChange() {
-            currentPage = 1; // Reset to page 1 on filter modification
-            applyFilters();
-            displayCurrentPage();
-        }
+            return {
+                id: battleId,
+                startTime: startTime,
+                players: players
+            };
+        });
+    }
 
-        function displayCurrentPage() {
-            const tbody = document.getElementById('battle-rows');
-            tbody.innerHTML = "";
-
-            if (filteredBattles.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-xs text-gray-500 italic">No historical operational logs uncovered within this filtered timeframe.</td></tr>`;
-                updatePaginationControls();
-                return;
-            }
-
-            const startIndex = (currentPage - 1) * rowsPerPage;
-            const endIndex = Math.min(startIndex + rowsPerPage, filteredBattles.length);
-            const pageSlice = filteredBattles.slice(startIndex, endIndex);
-
-            pageSlice.forEach(battle => {
-                let targetGuildName = "NoFreeThinkers";
-                let computedKills = 0;
-                let computedDeaths = 0;
-                let computedFame = 0;
-
+    function applyFilters() {
+        const inputElement = document.getElementById('filter-min-players');
+        const minPlayers = (inputElement && inputElement.value !== "") ? parseInt(inputElement.value, 10) : 0;
+        
+        if (minPlayers <= 0 || isNaN(minPlayers)) {
+            filteredBattles = [...allBattlesCache];
+        } else {
+            filteredBattles = allBattlesCache.filter(battle => {
+                let guildPlayerCount = 0;
                 if (battle.players) {
                     Object.values(battle.players).forEach(player => {
                         if (player.guildId === TARGET_GUILD_ID) {
-                            if (player.guildName) targetGuildName = player.guildName;
-                            computedKills += (player.kills || 0);
-                            computedDeaths += (player.deaths || 0);
-                            computedFame += (player.killFame || 0);
+                            guildPlayerCount++;
                         }
                     });
                 }
-
-                const isChecked = selectedBattleIds.has(battle.id) ? 'checked' : '';
-
-                const row = document.createElement('tr');
-                row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/60 text-gray-300";
-                row.innerHTML = `
-                    <td class="p-4 text-center">
-                        <input type="checkbox" data-id="${battle.id}" ${isChecked} onchange="toggleBattleSelection(this, ${battle.id})" class="w-4 h-4 rounded border-gray-800 bg-gray-950 text-amber-500 accent-amber-500 focus:ring-0 cursor-pointer">
-                    </td>
-                    <td class="p-4 font-medium text-gray-200">
-                        <span class="block text-white font-bold">#${battle.id}</span>
-                        <span class="text-xs text-gray-500 font-mono">${formatDateString(battle.startTime)}</span>
-                    </td>
-                    <td class="p-4 font-bold text-amber-400 tracking-wide">
-                        ${targetGuildName}
-                    </td>
-                    <td class="p-4 text-center font-extrabold text-emerald-400">
-                        ${computedKills}
-                    </td>
-                    <td class="p-4 text-center font-extrabold text-red-400">
-                        ${computedDeaths}
-                    </td>
-                    <td class="p-4 font-black text-gray-100">
-                        ${formatCompactFame(computedFame)}
-                    </td>
-                    <td class="p-4 text-center">
-                        <a href="battleboard-detail.html?id=${battle.id}" class="inline-flex items-center justify-center bg-gray-900 hover:bg-amber-500 border border-amber-500/20 text-xs font-bold text-amber-400 hover:text-black px-3 py-1.5 rounded-lg transition-all shadow-md">
-                            Check Battleboard <i class="fas fa-chart-line ml-1.5 text-[10px]"></i>
-                        </a>
-                    </td>
-                `;
-                tbody.appendChild(row);
+                return guildPlayerCount >= minPlayers;
             });
+        }
+    }
 
-            updatePaginationControls(startIndex, endIndex);
+    function handleFilterChange() {
+        currentPage = 1; 
+        applyFilters();
+        displayCurrentPage();
+    }
+
+    function displayCurrentPage() {
+        const tbody = document.getElementById('battle-rows');
+        if (!tbody) return;
+        tbody.innerHTML = "";
+
+        if (filteredBattles.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-xs text-gray-500 italic">No historical operational logs uncovered within this filtered timeframe.</td></tr>`;
+            updatePaginationControls();
+            return;
         }
 
-        function updatePaginationControls(start = 0, end = 0) {
-            const total = filteredBattles.length;
-            const totalPages = Math.ceil(total / rowsPerPage) || 1;
-            
-            document.getElementById('pagination-info').innerText = total > 0 
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = Math.min(startIndex + rowsPerPage, filteredBattles.length);
+        const pageSlice = filteredBattles.slice(startIndex, endIndex);
+
+        pageSlice.forEach(battle => {
+            let targetGuildName = "NoFreeThinkers";
+            let computedKills = 0;
+            let computedDeaths = 0;
+            let computedFame = 0;
+
+            if (battle.players) {
+                Object.values(battle.players).forEach(player => {
+                    if (player.guildId === TARGET_GUILD_ID) {
+                        if (player.guildName) targetGuildName = player.guildName;
+                        computedKills += (player.kills || 0);
+                        computedDeaths += (player.deaths || 0);
+                        computedFame += (player.killFame || 0);
+                    }
+                });
+            }
+
+            const isChecked = selectedBattleIds.has(battle.id) ? 'checked' : '';
+
+            const row = document.createElement('tr');
+            row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/60 text-gray-300";
+            row.innerHTML = `
+                <td class="p-4 text-center">
+                    <input type="checkbox" data-id="${battle.id}" ${isChecked} onchange="toggleBattleSelection(this, ${battle.id})" class="w-4 h-4 rounded border-gray-800 bg-gray-950 text-amber-500 accent-amber-500 focus:ring-0 cursor-pointer">
+                </td>
+                <td class="p-4 font-medium text-gray-200">
+                    <span class="block text-white font-bold">#${battle.id}</span>
+                    <span class="text-xs text-gray-500 font-mono">${formatDateString(battle.startTime)}</span>
+                </td>
+                <td class="p-4 font-bold text-amber-400 tracking-wide">
+                    ${targetGuildName}
+                </td>
+                <td class="p-4 text-center font-extrabold text-emerald-400">
+                    ${computedKills}
+                </td>
+                <td class="p-4 text-center font-extrabold text-red-400">
+                    ${computedDeaths}
+                </td>
+                <td class="p-4 font-black text-gray-100">
+                    ${formatCompactFame(computedFame)}
+                </td>
+                <td class="p-4 text-center">
+                    <a href="battleboard-detail.html?id=${battle.id}" class="inline-flex items-center justify-center bg-gray-900 hover:bg-amber-500 border border-amber-500/20 text-xs font-bold text-amber-400 hover:text-black px-3 py-1.5 rounded-lg transition-all shadow-md">
+                        Check Battleboard <i class="fas fa-chart-line ml-1.5 text-[10px]"></i>
+                    </a>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        updatePaginationControls(startIndex, endIndex);
+    }
+
+    function updatePaginationControls(start = 0, end = 0) {
+        const total = filteredBattles.length;
+        const totalPages = Math.ceil(total / rowsPerPage) || 1;
+        
+        const infoEl = document.getElementById('pagination-info');
+        if (infoEl) {
+            infoEl.innerText = total > 0 
                 ? `Showing ${start + 1}-${end} of ${total} logs (Page ${currentPage}/${totalPages})`
                 : `Showing 0-0 of 0 logs`;
-
-            document.getElementById('btn-prev').disabled = (currentPage === 1);
-            document.getElementById('btn-next').disabled = (currentPage === totalPages || total === 0);
         }
 
-        function changePage(direction) {
-            currentPage += direction;
+        const prevBtn = document.getElementById('btn-prev');
+        const nextBtn = document.getElementById('btn-next');
+        if (prevBtn) prevBtn.disabled = (currentPage === 1);
+        if (nextBtn) nextBtn.disabled = (currentPage === totalPages || total === 0);
+    }
+
+    function changePage(direction) {
+        currentPage += direction;
+        displayCurrentPage();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleBattleSelection(checkbox, battleId) {
+        if (checkbox.checked) {
+            selectedBattleIds.add(battleId);
+        } else {
+            selectedBattleIds.delete(battleId);
+        }
+        updateMultiSelectBanner();
+    }
+
+    function updateMultiSelectBanner() {
+        const banner = document.getElementById('multi-select-banner');
+        const countText = document.getElementById('multi-select-count');
+        if (!banner || !countText) return;
+        
+        const totalSelected = selectedBattleIds.size;
+
+        if (totalSelected >= 2) {
+            countText.innerText = `${totalSelected} Battleboards Selected`;
+            banner.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
+        } else {
+            banner.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
+        }
+    }
+
+    function navigateToMultiBoards() {
+        const idArray = Array.from(selectedBattleIds);
+        const queryParam = idArray.join(',');
+        window.location.href = `multi-battleboards.html?ids=${queryParam}`;
+    }
+
+    async function initFetchWorkflow() {
+        try {
+            const res = await fetch(localJsonUrl);
+            if (!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
+            let rawData = await res.json();
+            
+            // Map the raw event payloads to the internal battle model structure
+            let parsedData = groupEventsIntoBattles(rawData);
+            
+            if (Array.isArray(parsedData)) {
+                parsedData.sort((a, b) => {
+                    return new Date(b.startTime || 0) - new Date(a.startTime || 0);
+                });
+            }
+            
+            allBattlesCache = parsedData;
+            applyFilters();
+            
+            document.getElementById('log-loading').classList.add('hidden');
+            document.getElementById('battleboards-container').classList.remove('hidden');
+            
             displayCurrentPage();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err) {
+            console.error("Workflow tracking payload acquisition mismatch:", err.message);
+            document.getElementById('log-loading').classList.add('hidden');
+            document.getElementById('error-fallback-panel').classList.remove('hidden');
         }
+    }
 
-        function toggleBattleSelection(checkbox, battleId) {
-            if (checkbox.checked) {
-                selectedBattleIds.add(battleId);
-            } else {
-                selectedBattleIds.delete(battleId);
-            }
-            updateMultiSelectBanner();
-        }
-
-        function updateMultiSelectBanner() {
-            const banner = document.getElementById('multi-select-banner');
-            const countText = document.getElementById('multi-select-count');
-            const totalSelected = selectedBattleIds.size;
-
-            if (totalSelected >= 2) {
-                countText.innerText = `${totalSelected} Battleboards Selected`;
-                banner.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
-            } else {
-                banner.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
-            }
-        }
-
-        function navigateToMultiBoards() {
-            const idArray = Array.from(selectedBattleIds);
-            const queryParam = idArray.join(',');
-            window.location.href = `multi-battleboards.html?ids=${queryParam}`;
-        }
-
-        async function initFetchWorkflow() {
-            try {
-                const res = await fetch(localJsonUrl);
-                if (!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
-                let parsedData = await res.json();
-                
-                if (Array.isArray(parsedData)) {
-                    parsedData.sort((a, b) => {
-                        return new Date(b.startTime || 0) - new Date(a.startTime || 0);
-                    });
-                }
-                
-                allBattlesCache = parsedData;
-                
-                // Initialize the filter engine with raw server data
-                applyFilters();
-                
-                document.getElementById('log-loading').classList.add('hidden');
-                document.getElementById('battleboards-container').classList.remove('hidden');
-                
-                displayCurrentPage();
-            } catch (err) {
-                console.error("Workflow tracking payload acquisition mismatch:", err.message);
-                document.getElementById('log-loading').classList.add('hidden');
-                document.getElementById('error-fallback-panel').classList.remove('hidden');
-            }
-        }
-
-        initFetchWorkflow();
-    </script>
+    initFetchWorkflow();
+</script>
 </body>
 </html>
