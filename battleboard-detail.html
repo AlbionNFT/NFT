@@ -5,52 +5,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Battle Analytics | NoFreeThinkers</title>
     
-    <meta property="og:title" content="No Free Thinkers | Single Battleboard" />
+    <meta property="og:title" content="⚔️ No Free Thinkers | Combat Summary" />
     <meta property="og:type" content="website" />
-    <meta property="og:description" content="Consolidated Alliance Performance Report Metrics." />
     <meta name="theme-color" content="#fbbf24" />
+    
+    <meta id="og-desc" property="og:description" content="Aggregated Combat Report - Fetching Live Alliance & Performance Logs..." />
 
     <script>
-        (function() {
+        (async function() {
+            // 1. Match parameter parsing criteria matching your script behavior
             const params = new URLSearchParams(window.location.search);
-            const ids = params.get('ids');
+            const battleIdStr = params.get('id'); // Notice we search for 'id' to match getQueryBattleId()
+            if (!battleIdStr) return;
 
-            if (ids) {
-                // Clean up the IDs string to locate the matching image path name
-                const safeFileName = ids.split(',').map(id => id.trim()).join('_');
-                const githubUser = "AlbionNFT"; 
-                const githubRepo = "NFT";
-                
-                // Location where GitHub Actions saves the generated image frames
-                const staticImgUrl = `https://raw.githubusercontent.com/${githubUser}/${githubRepo}/main/battle-images/summary_${safeFileName}.png`;
-                
-                // Hand the raw link directly to Discord's preview wrapper frame
-                const ogImage = document.createElement('meta');
-                ogImage.setAttribute('property', 'og:image');
-                ogImage.setAttribute('content', staticImgUrl);
-                document.head.appendChild(ogImage);
+            try {
+                // 2. Query file asset path 
+                const res = await fetch(`/battle-data.json?t=${Date.now()}`);
+                if (!res.ok) return;
+                const battles = await res.json();
 
-                // Run a background availability check on your repository asset folder
-                fetch(staticImgUrl, { method: 'HEAD' })
-                    .then(res => {
-                        if (res.status === 404) {
-                            console.log("New ID matrix combo detected. Launching repository dispatch pipelines...");
-                            
-                            // Trigger the background workflow runner and safely pass the client payload variables
-                            fetch(`https://api.github.com/repos/${githubUser}/${githubRepo}/dispatches`, {
-                                method: 'POST',
-                                headers: {
-                                    'Accept': 'application/vnd.github.v3+json',
-                                    // Replace your public-safe fine-grained token signature below
-                                    'Authorization': 'token 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'
-                                },
-                                body: JSON.stringify({
-                                    event_type: 'capture_summary_table',
-                                    client_payload: { ids: ids } // Handing the exact ?ids= string to process.env.BATTLE_IDS!
-                                })
-                            }).catch(err => console.error("Dispatch failure:", err));
-                        }
-                    }).catch(() => {});
+                // Find matching token reference inside file context
+                const battle = battles.find(b => String(b.id) === String(battleIdStr));
+                if (!battle) return;
+
+                // 3. Data Deconstruction Loop (Recreating your map functions for the preview)
+                const rawPlayersArray = battle.players ? Object.values(battle.players) : [];
+                let allianceMap = {};
+
+                rawPlayersArray.forEach(p => {
+                    const allianceName = p.allianceName && p.allianceName.trim() !== "" ? p.allianceName.toUpperCase() : "NONE";
+                    const kills = p.kills || 0;
+                    const fame = p.killFame || 0;
+
+                    if (!allianceMap[allianceName]) {
+                        allianceMap[allianceName] = { name: allianceName, kills: 0, fame: 0 };
+                    }
+                    allianceMap[allianceName].kills += kills;
+                    allianceMap[allianceName].fame += fame;
+                });
+
+                // Convert to array and sort by performance metrics to mirror your dashboard panels
+                const sortedAlliances = Object.values(allianceMap).sort((a, b) => b.fame - a.fame);
+
+                if (sortedAlliances.length > 0) {
+                    // Helper function inside scope to format fame cleanly for narrow Discord embed windows
+                    const shortFame = (num) => {
+                        if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+                        if (num >= 1e3) return (num / 1e3).toFixed(0) + 'k';
+                        return num;
+                    };
+
+                    // 4. Construct Monospace Table Block Layout Matrix
+                    let tableString = "```\n";
+                    tableString += "Alliance   | Kills | Fame\n";
+                    tableString += "-----------|-------|-------\n";
+
+                    // Limit output preview to top 4 alliances to ensure Discord doesn't clip the text box layout limits
+                    sortedAlliances.slice(0, 4).forEach(a => {
+                        const nameStr = (a.name === 'NONE' ? '[No Ally]' : a.name).substring(0, 10).padEnd(10, ' ');
+                        const killStr = String(a.kills).substring(0, 5).padEnd(5, ' ');
+                        const fameStr = shortFame(a.fame);
+                        
+                        tableString += `${nameStr} | ${killStr} | ${fameStr}\n`;
+                    });
+
+                    tableString += "```";
+
+                    // 5. Update Target Element Data Structure
+                    const descTag = document.getElementById('og-desc');
+                    if (descTag) {
+                        descTag.setAttribute('content', tableString);
+                    }
+                }
+            } catch (err) {
+                console.error("OpenGraph metadata compiling exception catch context:", err);
             }
         })();
     </script>
