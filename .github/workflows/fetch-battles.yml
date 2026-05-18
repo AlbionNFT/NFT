@@ -20,7 +20,7 @@ jobs:
 
       - name: Fetch Recent Battle Logs from Albion API (With Smart Retries)
         run: |
-          API_URL="https://gameinfo.albiononline.com/api/gameinfo/events?range=months&offset=0&limit=999&guildId=AIbIw4erSVyHg9Ab6LVtdA"
+          API_URL="https://gameinfo.albiononline.com/api/gameinfo/events?range=months&offset=0&limit=51&guildId=AIbIw4erSVyHg9Ab6LVtdA"
           
           # Try up to 3 times for these heavy data chunks
           for i in {1..3}; do
