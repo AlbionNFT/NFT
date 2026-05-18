@@ -297,7 +297,6 @@
             updatePaginationControls(startIndex, endIndex);
         }
 
-        // Functional Filter Routine Processing Framework Block
         function applyPlayerVolumeFilter() {
             const inputVal = document.getElementById('player-limit-input').value.trim();
             
@@ -308,14 +307,13 @@
                 if (isNaN(minPlayersLimit) || minPlayersLimit < 0) return;
 
                 filteredBattlesCache = allBattlesCache.filter(battle => {
-                    // Pull and aggregate total player elements if array objects exist
                     if (!battle.players) return false;
                     const totalCombatantsCount = Object.keys(battle.players).length;
                     return totalCombatantsCount >= minPlayersLimit;
                 });
             }
 
-            currentPage = 1; // Reset window coordinates to page 1 to prevent viewing empty indices
+            currentPage = 1; 
             displayCurrentPage();
         }
 
@@ -367,11 +365,11 @@
 
         async function initFetchWorkflow() {
             try {
-                const res = await fetch(localJsonUrl);
+                // Safeguard: Added cache control options to ignore local Service Worker blockages
+                const res = await fetch(localJsonUrl, { cache: "no-store" });
                 if (!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
                 let parsedData = await res.json();
                 
-                // Explicit sorting mechanism: Organizes by newest battle down to oldest battle
                 if (Array.isArray(parsedData)) {
                     parsedData.sort((a, b) => {
                         return new Date(b.startTime || 0) - new Date(a.startTime || 0);
@@ -379,6 +377,7 @@
                 }
                 
                 allBattlesCache = parsedData;
+                filteredBattlesCache = [...allBattlesCache]; // Fixed initialization error link
                 
                 document.getElementById('log-loading').classList.add('hidden');
                 document.getElementById('battleboards-container').classList.remove('hidden');
