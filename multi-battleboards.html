@@ -4,6 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Battle Analytics | NoFreeThinkers</title>
+    
+    <meta property="og:title" content="No Free Thinkers | Multiple Battleboard" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="Aggregated Battle Report - Live Alliance & Combat Performance Tallies." />
+    <meta name="theme-color" content="#fbbf24" />
+
+    <script>
+        (function() {
+            // 1. Detect if the entity checking the page is a crawler bot
+            const ua = navigator.userAgent.toLowerCase();
+            const isBot = /discordbot|twitterbot|slackbot|whatsapp|telegram|embedly|facebookexternalhit|microlink/i.test(ua);
+            
+            // 2. Also check if this is Microlink rendering the background window context
+            const isMicrolinkContext = window.location.href.includes('microlink.io');
+
+            const params = new URLSearchParams(window.location.search);
+            const ids = params.get('ids');
+
+            // ONLY inject the screenshot tags if it's a social bot or the renderer itself
+            if (ids && (isBot || isMicrolinkContext)) {
+                const ogImage = document.createElement('meta');
+                ogImage.setAttribute('property', 'og:image');
+
+                // Strip any messy trailing tokens to pass a 100% clean query URL to Microlink
+                const baseTargetUrl = window.location.origin + window.location.pathname + '?ids=' + ids;
+                const encodedUrl = encodeURIComponent(baseTargetUrl);
+                
+                // CONFIGURATION EXPLANATION:
+                // - screenshot=true: Instructs the worker to yield a PNG capture
+                // - embed=screenshot.url: Returns a raw image stream Discord can render
+                // - element=%23alliance-summary-card: Crops pixel-perfectly to your specific target div ID
+                // - waitFor=4000: Gives your client script 4 full seconds to merge dynamic JSON rows
+                const captureService = `https://api.microlink.io/?url=${encodedUrl}&screenshot=true&embed=screenshot.url&element=%23alliance-summary-card&waitFor=4000`;
+                
+                ogImage.setAttribute('content', captureService);
+                document.head.appendChild(ogImage);
+                
+                // Shape helpers to build a wide-frame embed card early
+                const ogImageWidth = document.createElement('meta');
+                ogImageWidth.setAttribute('property', 'og:image:width');
+                ogImageWidth.setAttribute('content', '1200');
+                document.head.appendChild(ogImageWidth);
+
+                const ogImageHeight = document.createElement('meta');
+                ogImageHeight.setAttribute('property', 'og:image:height');
+                ogImageHeight.setAttribute('content', '630');
+                document.head.appendChild(ogImageHeight);
+            }
+        })();
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
