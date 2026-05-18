@@ -292,477 +292,609 @@
     </footer>
 
     <script>
-            const githubUser = 'AlbionNFT';
-            const repoName = 'NFT'; 
-            const localJsonUrl = `/battle-data.json?t=${Date.now()}`;
+        const githubUser = 'AlbionNFT';
+        const repoName = 'NFT'; 
+        const localJsonUrl = `/battle-data.json?t=${Date.now()}`;
 
-            // Global footprint tracking components arrays
-            let globalPlayersArray = [];
-            let globalAllianceArray = [];
-            let globalGuildArray = [];
+        // Global footprint tracking components arrays
+        let globalPlayersArray = [];
+        let globalAllianceArray = [];
+        let globalGuildArray = [];
+        let globalCombatLogsArray = []; // Unified streaming array for precise data records
 
-            // Sorting configuration tracking
-            let activeSortColumn = 'fame'; 
-            let isDescending = true;
-            let selectedGuilds = new Set();
-            let selectedAlliances = new Set();
+        // Sorting & UI Filter Configuration Tracking
+        let activeSortColumn = 'fame'; 
+        let isDescending = true;
+        let selectedGuilds = new Set();
+        let selectedAlliances = new Set();
 
-            // Independent Pagination State Controls
-            let playerCurrentPage = 1;
-            const playerRowsPerPage = 15;
+        // Independent Pagination State Controls
+        let playerCurrentPage = 1;
+        const playerRowsPerPage = 15;
 
-            let allianceCurrentPage = 1;
-            const allianceRowsPerPage = 10;
+        let allianceCurrentPage = 1;
+        const allianceRowsPerPage = 10;
 
-            let guildCurrentPage = 1;
-            const guildRowsPerPage = 10;
+        let guildCurrentPage = 1;
+        const guildRowsPerPage = 10;
 
-            function formatCompactFame(num) {
-                if (!num || isNaN(num)) return "0";
-                const val = parseFloat(num);
-                if (val >= 1e9) return (val / 1e9).toFixed(2) + 'B';
-                if (val >= 1e6) return (val / 1e6).toFixed(2) + 'M';
-                if (val >= 1e3) return (val / 1e3).toFixed(1) + 'k';
-                return val.toLocaleString();
+        let combatLogCurrentPage = 1;
+        const combatLogRowsPerPage = 15;
+
+        function formatCompactFame(num) {
+            if (!num || isNaN(num)) return "0";
+            const val = parseFloat(num);
+            if (val >= 1e9) return (val / 1e9).toFixed(2) + 'B';
+            if (val >= 1e6) return (val / 1e6).toFixed(2) + 'M';
+            if (val >= 1e3) return (val / 1e3).toFixed(1) + 'k';
+            return val.toLocaleString();
+        }
+
+        function formatUtcTimestamp(isoString) {
+            try {
+                const d = new Date(isoString);
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()} - ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
+            } catch(e) { return "Unknown Horizon Frame"; }
+        }
+
+        function getQueryBattleId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('EventId');
+        }
+
+        function toggleDropdown(dropdownId, event) {
+            event.stopPropagation();
+            const element = document.getElementById(dropdownId);
+            if(!element) return;
+            const isHidden = element.classList.contains('hidden');
+            
+            if(document.getElementById('guild-dropdown')) document.getElementById('guild-dropdown').classList.add('hidden');
+            if(document.getElementById('alliance-dropdown')) document.getElementById('alliance-dropdown').classList.add('hidden');
+
+            if (isHidden) element.classList.remove('hidden');
+        }
+
+        window.addEventListener('click', () => {
+            if (document.getElementById('guild-dropdown')) document.getElementById('guild-dropdown').classList.add('hidden');
+            if (document.getElementById('alliance-dropdown')) document.getElementById('alliance-dropdown').classList.add('hidden');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const gd = document.getElementById('guild-dropdown');
+            const ad = document.getElementById('alliance-dropdown');
+            if (gd) gd.addEventListener('click', (e) => e.stopPropagation());
+            if (ad) ad.addEventListener('click', (e) => e.stopPropagation());
+        });
+
+        function createEmptyPlayerProfile(apiData) {
+            return {
+                name: apiData.Name || "Unknown Combatant",
+                guildName: apiData.GuildName && apiData.GuildName.trim() !== "" ? apiData.GuildName : "Unknown Guild",
+                allianceName: apiData.AllianceName && apiData.AllianceName.trim() !== "" ? apiData.AllianceName.toUpperCase() : "NONE",
+                kills: 0,
+                deaths: 0,
+                fame: 0
+            };
+        }
+
+        // Helper to safely unpack inventory item signatures from the payload structure
+        function getWeaponTypeSignature(entity) {
+            if (entity && entity.Equipment && entity.Equipment.MainHand && entity.Equipment.MainHand.Type) {
+                return entity.Equipment.MainHand.Type;
+            }
+            return null;
+        }
+
+        async function processBattleboardDeconstruction() {
+            const battleIdStr = getQueryBattleId();
+            if (!battleIdStr) {
+                renderErrorState("Operational fault: No precise parameters query string specified.");
+                return;
             }
 
-            function formatUtcTimestamp(isoString) {
-                try {
-                    const d = new Date(isoString);
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()} - ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
-                } catch(e) { return "Unknown Horizon Frame"; }
-            }
+            try {
+                const res = await fetch(localJsonUrl);
+                if (!res.ok) throw new Error(`HTTP payload breakdown: ${res.status}`);
+                const events = await res.json();
 
-            function getQueryBattleId() {
-                const params = new URLSearchParams(window.location.search);
-                return params.get('EventId');
-            }
+                const battleEvents = events.filter(e => 
+                    String(e.BattleId) === String(battleIdStr) || String(e.EventId) === String(battleIdStr)
+                );
 
-            function toggleDropdown(dropdownId, event) {
-                event.stopPropagation();
-                const element = document.getElementById(dropdownId);
-                const isHidden = element.classList.contains('hidden');
-                
-                document.getElementById('guild-dropdown').classList.add('hidden');
-                document.getElementById('alliance-dropdown').classList.add('hidden');
-
-                if (isHidden) element.classList.remove('hidden');
-            }
-
-            window.addEventListener('click', () => {
-                if (document.getElementById('guild-dropdown')) document.getElementById('guild-dropdown').classList.add('hidden');
-                if (document.getElementById('alliance-dropdown')) document.getElementById('alliance-dropdown').classList.add('hidden');
-            });
-
-            // Safe attachment of click stopPropagation helpers once elements exist
-            document.addEventListener('DOMContentLoaded', () => {
-                const gd = document.getElementById('guild-dropdown');
-                const ad = document.getElementById('alliance-dropdown');
-                if (gd) gd.addEventListener('click', (e) => e.stopPropagation());
-                if (ad) ad.addEventListener('click', (e) => e.stopPropagation());
-            });
-
-            // Dynamic uniform profile constructor helper targeting Albion API format
-            function createEmptyPlayerProfile(apiData) {
-                return {
-                    name: apiData.Name || "Unknown Combatant",
-                    guildName: apiData.GuildName && apiData.GuildName.trim() !== "" ? apiData.GuildName : "Unknown Guild",
-                    allianceName: apiData.AllianceName && apiData.AllianceName.trim() !== "" ? apiData.AllianceName.toUpperCase() : "NONE",
-                    kills: 0,
-                    deaths: 0,
-                    fame: 0
-                };
-            }
-
-            async function processBattleboardDeconstruction() {
-                const battleIdStr = getQueryBattleId();
-                if (!battleIdStr) {
-                    renderErrorState("Operational fault: No precise parameters query string specified.");
+                if (battleEvents.length === 0) {
+                    renderErrorState(`Battle record context token #${battleIdStr} doesn't exist.`);
                     return;
                 }
 
-                try {
-                    const res = await fetch(localJsonUrl);
-                    if (!res.ok) throw new Error(`HTTP payload breakdown: ${res.status}`);
-                    const events = await res.json();
+                const referenceEvent = battleEvents[0];
+                if(document.getElementById('header-battle-id')) document.getElementById('header-battle-id').innerText = `#${referenceEvent.BattleId || referenceEvent.EventId}`;
+                if(document.getElementById('header-battle-time')) document.getElementById('header-battle-time').innerText = formatUtcTimestamp(referenceEvent.TimeStamp);
 
-                    // Filter events matching the target URL argument via BattleId or unique EventId parameters
-                    const battleEvents = events.filter(e => 
-                        String(e.BattleId) === String(battleIdStr) || String(e.EventId) === String(battleIdStr)
-                    );
+                let playerAggregationMap = {};
+                let allianceMap = {};
+                let guildMap = {};
+                let rawLogsStream = [];
 
-                    if (battleEvents.length === 0) {
-                        renderErrorState(`Battle record context token #${battleIdStr} doesn't exist.`);
-                        return;
+                battleEvents.forEach(event => {
+                    const eventFame = event.TotalVictimKillFame || 0;
+
+                    // --- 1. COMPILE UNIQUE COMBAT LOG ENTRIES WITH WEAPON API STRINGS ---
+                    if (event.Killer && event.Victim) {
+                        rawLogsStream.push({
+                            eventId: event.EventId,
+                            killerName: event.Killer.Name || "Unknown Killer",
+                            killerGuild: event.Killer.GuildName || "No Guild",
+                            killerAlliance: event.Killer.AllianceName && event.Killer.AllianceName.trim() !== "" ? event.Killer.AllianceName.toUpperCase() : "NONE",
+                            killerIp: event.Killer.AverageItemPower ? Math.round(event.Killer.AverageItemPower) : 0,
+                            killerWeapon: getWeaponTypeSignature(event.Killer),
+                            
+                            victimName: event.Victim.Name || "Unknown Victim",
+                            victimGuild: event.Victim.GuildName || "No Guild",
+                            victimAlliance: event.Victim.AllianceName && event.Victim.AllianceName.trim() !== "" ? event.Victim.AllianceName.toUpperCase() : "NONE",
+                            victimIp: event.Victim.AverageItemPower ? Math.round(event.Victim.AverageItemPower) : 0,
+                            victimWeapon: getWeaponTypeSignature(event.Victim),
+                            
+                            fame: eventFame
+                        });
                     }
 
-                    // Reference properties from the initial event node
-                    const referenceEvent = battleEvents[0];
-                    document.getElementById('header-battle-id').innerText = `#${referenceEvent.BattleId || referenceEvent.EventId}`;
-                    document.getElementById('header-battle-time').innerText = formatUtcTimestamp(referenceEvent.TimeStamp);
+                    // --- 2. COMPILE TRADITIONAL PLAYER AGGREGATIONS ---
+                    if (event.Killer && event.Killer.Id) {
+                        const kId = event.Killer.Id;
+                        if (!playerAggregationMap[kId]) playerAggregationMap[kId] = createEmptyPlayerProfile(event.Killer);
+                        playerAggregationMap[kId].kills += 1;
+                        playerAggregationMap[kId].fame += eventFame;
+                    }
 
-                    // Aggregate structural entities out of individual kill event modules
-                    let playerAggregationMap = {};
+                    if (event.Victim && event.Victim.Id) {
+                        const vId = event.Victim.Id;
+                        if (!playerAggregationMap[vId]) playerAggregationMap[vId] = createEmptyPlayerProfile(event.Victim);
+                        playerAggregationMap[vId].deaths += 1;
+                    }
 
-                    battleEvents.forEach(event => {
-                        // Process Killer metrics
-                        if (event.Killer && event.Killer.Id) {
-                            const kId = event.Killer.Id;
-                            if (!playerAggregationMap[kId]) {
-                                playerAggregationMap[kId] = createEmptyPlayerProfile(event.Killer);
+                    if (event.Participants && Array.isArray(event.Participants)) {
+                        event.Participants.forEach(p => {
+                            if (p.Id && !playerAggregationMap[p.Id]) {
+                                playerAggregationMap[p.Id] = createEmptyPlayerProfile(p);
                             }
-                            playerAggregationMap[kId].kills += 1;
-                            playerAggregationMap[kId].fame += (event.TotalVictimKillFame || 0);
-                        }
+                        });
+                    }
+                });
 
-                        // Process Victim metrics 
-                        if (event.Victim && event.Victim.Id) {
-                            const vId = event.Victim.Id;
-                            if (!playerAggregationMap[vId]) {
-                                playerAggregationMap[vId] = createEmptyPlayerProfile(event.Victim);
-                            }
-                            playerAggregationMap[vId].deaths += 1;
-                        }
+                globalPlayersArray = Object.values(playerAggregationMap);
+                globalCombatLogsArray = rawLogsStream;
 
-                        // Process Assistant / Participant metrics tracking
-                        if (event.Participants && Array.isArray(event.Participants)) {
-                            event.Participants.forEach(p => {
-                                if (p.Id) {
-                                    if (!playerAggregationMap[p.Id]) {
-                                        playerAggregationMap[p.Id] = createEmptyPlayerProfile(p);
-                                    }
-                                }
-                            });
-                        }
-                    });
-
-                    globalPlayersArray = Object.values(playerAggregationMap);
+                if(document.getElementById('player-count-badge')) {
                     document.getElementById('player-count-badge').innerText = `${globalPlayersArray.length} Combatants Logged`;
-
-                    let allianceMap = {};
-                    let guildMap = {};
-
-                    globalPlayersArray.forEach(p => {
-                        if (!allianceMap[p.allianceName]) {
-                            allianceMap[p.allianceName] = { name: p.allianceName, players: 0, kills: 0, deaths: 0, fame: 0 };
-                        }
-                        allianceMap[p.allianceName].players++;
-                        allianceMap[p.allianceName].kills += p.kills;
-                        allianceMap[p.allianceName].deaths += p.deaths;
-                        allianceMap[p.allianceName].fame += p.fame;
-
-                        if (!guildMap[p.guildName]) {
-                            guildMap[p.guildName] = { name: p.guildName, alliance: p.allianceName, players: 0, kills: 0, deaths: 0, fame: 0 };
-                        }
-                        guildMap[p.guildName].players++;
-                        guildMap[p.guildName].kills += p.kills;
-                        guildMap[p.guildName].deaths += p.deaths;
-                        guildMap[p.guildName].fame += p.fame;
-                    });
-
-                    globalAllianceArray = Object.values(allianceMap).sort((a,b) => b.fame - a.fame);
-                    globalGuildArray = Object.values(guildMap).sort((a,b) => b.fame - a.fame);
-
-                    populateFilterMenus(Object.keys(guildMap), Object.keys(allianceMap));
-                    
-                    renderAllianceTable();
-                    renderGuildTable();
-                    renderPlayerTable();
-
-                    document.getElementById('detail-loading').classList.add('hidden');
-                    document.getElementById('detail-content').classList.remove('hidden');
-
-                } catch (err) {
-                    console.error("Pipeline failure parameters missing:", err);
-                    renderErrorState(`System file framework process breakdown: ${err.message}`);
                 }
-            }
 
-            // --- ALLIANCE TABLE RENDERING SYSTEM ---
-            function changeAlliancePage(direction) {
-                allianceCurrentPage += direction;
+                // --- 3. COMPILE ALLIANCE & GUILD HISTOGRAM SUMMARIES ---
+                globalPlayersArray.forEach(p => {
+                    if (!allianceMap[p.allianceName]) {
+                        allianceMap[p.allianceName] = { name: p.allianceName, players: 0, kills: 0, deaths: 0, fame: 0 };
+                    }
+                    allianceMap[p.allianceName].players++;
+                    allianceMap[p.allianceName].kills += p.kills;
+                    allianceMap[p.allianceName].deaths += p.deaths;
+                    allianceMap[p.allianceName].fame += p.fame;
+
+                    if (!guildMap[p.guildName]) {
+                        guildMap[p.guildName] = { name: p.guildName, alliance: p.allianceName, players: 0, kills: 0, deaths: 0, fame: 0 };
+                    }
+                    guildMap[p.guildName].players++;
+                    guildMap[p.guildName].kills += p.kills;
+                    guildMap[p.guildName].deaths += p.deaths;
+                    guildMap[p.guildName].fame += p.fame;
+                });
+
+                globalAllianceArray = Object.values(allianceMap).sort((a,b) => b.fame - a.fame);
+                globalGuildArray = Object.values(guildMap).sort((a,b) => b.fame - a.fame);
+
+                populateFilterMenus(Object.keys(guildMap), Object.keys(allianceMap));
+                
                 renderAllianceTable();
-            }
-
-            function renderAllianceTable() {
-                const tbody = document.getElementById('alliance-rows');
-                if(!tbody) return;
-                tbody.innerHTML = '';
-                
-                const total = globalAllianceArray.length;
-                const totalPages = Math.ceil(total / allianceRowsPerPage) || 1;
-                if (allianceCurrentPage > totalPages) allianceCurrentPage = totalPages;
-                if (allianceCurrentPage < 1) allianceCurrentPage = 1;
-
-                const start = (allianceCurrentPage - 1) * allianceRowsPerPage;
-                const end = Math.min(start + allianceRowsPerPage, total);
-                const paginated = globalAllianceArray.slice(start, end);
-
-                paginated.forEach(a => {
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-950";
-                    row.innerHTML = `
-                        <td class="p-3 font-bold text-gray-200">${a.name === 'NONE' ? '<span class="text-gray-600 italic">[No Alliance]</span>' : a.name}</td>
-                        <td class="p-3 text-center font-mono">${a.players}</td>
-                        <td class="p-3 text-center font-bold text-emerald-400">${a.kills}</td>
-                        <td class="p-3 text-center font-bold text-red-400">${a.deaths}</td>
-                        <td class="p-3 text-right font-black font-mono text-gray-400">${formatCompactFame(a.fame)}</td>
-                    `;
-                    tbody.appendChild(row);
-                });
-
-                document.getElementById('alliance-start').innerText = total === 0 ? 0 : start + 1;
-                document.getElementById('alliance-end').innerText = end;
-                document.getElementById('alliance-total').innerText = total;
-                document.getElementById('btn-alliance-prev').disabled = (allianceCurrentPage === 1);
-                document.getElementById('btn-alliance-next').disabled = (allianceCurrentPage === totalPages);
-            }
-
-            // --- GUILD TABLE RENDERING SYSTEM ---
-            function changeGuildPage(direction) {
-                guildCurrentPage += direction;
                 renderGuildTable();
-            }
-
-            function renderGuildTable() {
-                const tbody = document.getElementById('guild-rows');
-                if(!tbody) return;
-                tbody.innerHTML = '';
-
-                const total = globalGuildArray.length;
-                const totalPages = Math.ceil(total / guildRowsPerPage) || 1;
-                if (guildCurrentPage > totalPages) guildCurrentPage = totalPages;
-                if (guildCurrentPage < 1) guildCurrentPage = 1;
-
-                const start = (guildCurrentPage - 1) * guildRowsPerPage;
-                const end = Math.min(start + guildRowsPerPage, total);
-                const paginated = globalGuildArray.slice(start, end);
-
-                paginated.forEach(g => {
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-950";
-                    row.innerHTML = `
-                        <td class="p-3 font-bold text-amber-400">${g.name}</td>
-                        <td class="p-3 font-medium text-gray-500">${g.alliance === 'NONE' ? '-' : g.alliance}</td>
-                        <td class="p-3 text-center font-mono">${g.players}</td>
-                        <td class="p-3 text-center font-bold text-emerald-400">${g.kills}</td>
-                        <td class="p-3 text-center font-bold text-red-400">${g.deaths}</td>
-                        <td class="p-3 text-right font-black font-mono text-gray-400">${formatCompactFame(g.fame)}</td>
-                    `;
-                    tbody.appendChild(row);
-                });
-
-                document.getElementById('guild-start').innerText = total === 0 ? 0 : start + 1;
-                document.getElementById('guild-end').innerText = end;
-                document.getElementById('guild-total').innerText = total;
-                document.getElementById('btn-guild-prev').disabled = (guildCurrentPage === 1);
-                document.getElementById('btn-guild-next').disabled = (guildCurrentPage === totalPages);
-            }
-
-            // --- FILTER SELECTION DROPDOWN POPULATION MODULE ---
-            function populateFilterMenus(guildsList, alliancesList) {
-                const guildContainer = document.getElementById('guild-checkbox-list');
-                const allianceContainer = document.getElementById('alliance-checkbox-list');
-                if(!guildContainer || !allianceContainer) return;
-
-                guildContainer.innerHTML = '';
-                allianceContainer.innerHTML = '';
-
-                guildsList.sort().forEach(gName => {
-                    const label = document.createElement('label');
-                    label.className = "flex items-center gap-2 cursor-pointer hover:text-amber-400 py-0.5 select-none";
-                    label.innerHTML = `
-                        <input type="checkbox" value="${gName}" class="accent-amber-500 rounded border-gray-800 bg-gray-900 focus:ring-0">
-                        <span class="truncate">${gName}</span>
-                    `;
-                    label.querySelector('input').addEventListener('change', function() {
-                        if (this.checked) selectedGuilds.add(gName);
-                        else selectedGuilds.delete(gName);
-                        playerCurrentPage = 1; 
-                        renderPlayerTable();
-                    });
-                    guildContainer.appendChild(label);
-                });
-
-                alliancesList.sort().forEach(aTag => {
-                    const displayName = aTag === 'NONE' ? '[No Alliance]' : aTag;
-                    const label = document.createElement('label');
-                    label.className = "flex items-center gap-2 cursor-pointer hover:text-amber-400 py-0.5 select-none";
-                    label.innerHTML = `
-                        <input type="checkbox" value="${aTag}" class="accent-amber-500 rounded border-gray-800 bg-gray-900 focus:ring-0">
-                        <span class="truncate">${displayName}</span>
-                    `;
-                    label.querySelector('input').addEventListener('change', function() {
-                        if (this.checked) selectedAlliances.add(aTag);
-                        else selectedAlliances.delete(aTag);
-                        playerCurrentPage = 1; 
-                        renderPlayerTable();
-                    });
-                    allianceContainer.appendChild(label);
-                });
-            }
-
-            function clearFilterSelection(type, event) {
-                event.stopPropagation();
-                if (type === 'guild') {
-                    selectedGuilds.clear();
-                    document.querySelectorAll('#guild-checkbox-list input').forEach(cb => cb.checked = false);
-                } else {
-                    selectedAlliances.clear();
-                    document.querySelectorAll('#alliance-checkbox-list input').forEach(cb => cb.checked = false);
-                }
-                playerCurrentPage = 1; 
                 renderPlayerTable();
-            }
+                renderCombatLogsTable();
 
-            function toggleSort(columnKey) {
-                if (activeSortColumn === columnKey) {
-                    isDescending = !isDescending; 
-                } else {
-                    activeSortColumn = columnKey;
-                    isDescending = true; 
-                }
-
-                ['kills', 'deaths', 'fame'].forEach(col => {
-                    const icon = document.getElementById(`sort-icon-${col}`);
-                    if(icon) icon.className = "fas fa-sort text-[10px] text-gray-600";
-                });
-
-                const targetedIcon = document.getElementById(`sort-icon-${columnKey}`);
-                if(targetedIcon) {
-                    targetedIcon.className = isDescending ? "fas fa-sort-down text-[11px] text-amber-500" : "fas fa-sort-up text-[11px] text-amber-500";
-                }
-
-                playerCurrentPage = 1; 
-                renderPlayerTable();
-            }
-
-            function changePage(direction) {
-                playerCurrentPage += direction;
-                renderPlayerTable();
-            }
-
-            function goToPage(pageNum) {
-                playerCurrentPage = pageNum;
-                renderPlayerTable();
-            }
-
-            function renderPlayerTable() {
-                const playerTbody = document.getElementById('player-rows');
-                if(!playerTbody) return;
-                playerTbody.innerHTML = ''; 
-
-                let processedList = [...globalPlayersArray];
-
-                if (selectedGuilds.size > 0) {
-                    processedList = processedList.filter(p => selectedGuilds.has(p.guildName));
-                }
-                if (selectedAlliances.size > 0) {
-                    processedList = processedList.filter(p => selectedAlliances.has(p.allianceName));
-                }
-
-                processedList.sort((a, b) => {
-                    return isDescending ? (b[activeSortColumn] - a[activeSortColumn]) : (a[activeSortColumn] - b[activeSortColumn]);
-                });
-
-                const totalEntries = processedList.length;
-
-                if (totalEntries === 0) {
-                    playerTbody.innerHTML = `
-                        <tr>
-                            <td colspan="6" class="p-8 text-center text-xs text-gray-600 italic tracking-wide">
-                                No combatant records match your specific checkbox selections.
-                            </td>
-                        </tr>`;
-                    
-                    document.getElementById('pagination-start').innerText = '0';
-                    document.getElementById('pagination-end').innerText = '0';
-                    document.getElementById('pagination-total').innerText = '0';
-                    document.getElementById('btn-prev-page').disabled = true;
-                    document.getElementById('btn-next-page').disabled = true;
-                    document.getElementById('pagination-numbers').innerHTML = '';
-                    return;
-                }
-
-                const totalPages = Math.ceil(totalEntries / playerRowsPerPage);
-                if (playerCurrentPage > totalPages) playerCurrentPage = totalPages;
-                if (playerCurrentPage < 1) playerCurrentPage = 1;
-
-                const startIndex = (playerCurrentPage - 1) * playerRowsPerPage;
-                const endIndex = Math.min(startIndex + playerRowsPerPage, totalEntries);
-                const paginatedList = processedList.slice(startIndex, endIndex);
-
-                paginatedList.forEach(p => {
-                    const allianceTag = p.allianceName === 'NONE' ? "-" : p.allianceName;
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/40";
-                    row.innerHTML = `
-                        <td class="p-4 font-bold text-gray-100 flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500"></span>
-                            ${p.name}
-                        </td>
-                        <td class="p-4 text-gray-300 font-medium">${p.guildName}</td>
-                        <td class="p-4 text-xs font-mono font-bold text-gray-500">${allianceTag}</td>
-                        <td class="p-4 text-center font-black text-emerald-400 font-mono text-sm">${p.kills}</td>
-                        <td class="p-4 text-center font-black text-red-400 font-mono text-sm">${p.deaths}</td>
-                        <td class="p-4 text-right font-black text-amber-400 font-mono">${formatCompactFame(p.fame)}</td>
-                    `;
-                    playerTbody.appendChild(row);
-                });
-
-                document.getElementById('pagination-start').innerText = startIndex + 1;
-                document.getElementById('pagination-end').innerText = endIndex;
-                document.getElementById('pagination-total').innerText = totalEntries;
-
-                document.getElementById('btn-prev-page').disabled = (playerCurrentPage === 1);
-                document.getElementById('btn-next-page').disabled = (playerCurrentPage === totalPages);
-
-                const numContainer = document.getElementById('pagination-numbers');
-                if(!numContainer) return;
-                numContainer.innerHTML = '';
-
-                for (let i = 1; i <= totalPages; i++) {
-                    if (totalPages > 5 && i !== 1 && i !== totalPages && Math.abs(i - playerCurrentPage) > 1) {
-                        if (i === 2 && playerCurrentPage > 3) {
-                            const dots = document.createElement('span');
-                            dots.className = "px-1.5 text-gray-600";
-                            dots.innerText = "...";
-                            numContainer.appendChild(dots);
-                            i = playerCurrentPage - 2;
-                        } else if (i === playerCurrentPage + 1 && playerCurrentPage < totalPages - 2) {
-                            const dots = document.createElement('span');
-                            dots.className = "px-1.5 text-gray-600";
-                            dots.innerText = "...";
-                            numContainer.appendChild(dots);
-                            i = totalPages - 1;
-                        }
-                        continue;
-                    }
-
-                    const pageBtn = document.createElement('button');
-                    pageBtn.innerText = i;
-                    if (i === playerCurrentPage) {
-                        pageBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-gray-950 font-bold shadow-sm shadow-amber-500/20";
-                    } else {
-                        pageBtn.className = "px-2.5 py-1 rounded-md bg-gray-900 border border-gray-800 text-gray-400 hover:text-amber-400 font-medium transition-colors";
-                        pageBtn.onclick = () => goToPage(i);
-                    }
-                    numContainer.appendChild(pageBtn);
-                }
-            }
-
-            function renderErrorState(customErrorMessage) {
-                const errText = document.getElementById('error-message-text');
-                if(errText) errText.innerText = customErrorMessage;
-                
                 if(document.getElementById('detail-loading')) document.getElementById('detail-loading').classList.add('hidden');
-                if(document.getElementById('detail-content')) document.getElementById('detail-content').classList.add('hidden');
-                if(document.getElementById('error-panel')) document.getElementById('error-panel').classList.remove('hidden');
+                if(document.getElementById('detail-content')) document.getElementById('detail-content').classList.remove('hidden');
+
+            } catch (err) {
+                console.error("Pipeline breakdown details:", err);
+                renderErrorState(`System file framework process breakdown: ${err.message}`);
+            }
+        }
+
+        // --- ALLIANCE SUMMARY SYSTEM ---
+        function changeAlliancePage(direction) {
+            allianceCurrentPage += direction;
+            renderAllianceTable();
+        }
+
+        function renderAllianceTable() {
+            const tbody = document.getElementById('alliance-rows');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            
+            const total = globalAllianceArray.length;
+            const totalPages = Math.ceil(total / allianceRowsPerPage) || 1;
+            if (allianceCurrentPage > totalPages) allianceCurrentPage = totalPages;
+            if (allianceCurrentPage < 1) allianceCurrentPage = 1;
+
+            const start = (allianceCurrentPage - 1) * allianceRowsPerPage;
+            const end = Math.min(start + allianceRowsPerPage, total);
+            const paginated = globalAllianceArray.slice(start, end);
+
+            paginated.forEach(a => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-950";
+                row.innerHTML = `
+                    <td class="p-3 font-bold text-gray-200">${a.name === 'NONE' ? '<span class="text-gray-600 italic">[No Alliance]</span>' : a.name}</td>
+                    <td class="p-3 text-center font-mono text-gray-400">${a.players}</td>
+                    <td class="p-3 text-center font-bold text-emerald-400">${a.kills}</td>
+                    <td class="p-3 text-center font-bold text-red-400">${a.deaths}</td>
+                    <td class="p-3 text-right font-black font-mono text-amber-500">${formatCompactFame(a.fame)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            if(document.getElementById('alliance-start')) document.getElementById('alliance-start').innerText = total === 0 ? 0 : start + 1;
+            if(document.getElementById('alliance-end')) document.getElementById('alliance-end').innerText = end;
+            if(document.getElementById('alliance-total')) document.getElementById('alliance-total').innerText = total;
+            if(document.getElementById('btn-alliance-prev')) document.getElementById('btn-alliance-prev').disabled = (allianceCurrentPage === 1);
+            if(document.getElementById('btn-alliance-next')) document.getElementById('btn-alliance-next').disabled = (allianceCurrentPage === totalPages);
+        }
+
+        // --- GUILD SUMMARY SYSTEM ---
+        function changeGuildPage(direction) {
+            guildCurrentPage += direction;
+            renderGuildTable();
+        }
+
+        function renderGuildTable() {
+            const tbody = document.getElementById('guild-rows');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            const total = globalGuildArray.length;
+            const totalPages = Math.ceil(total / guildRowsPerPage) || 1;
+            if (guildCurrentPage > totalPages) guildCurrentPage = totalPages;
+            if (guildCurrentPage < 1) guildCurrentPage = 1;
+
+            const start = (guildCurrentPage - 1) * guildRowsPerPage;
+            const end = Math.min(start + guildRowsPerPage, total);
+            const paginated = globalGuildArray.slice(start, end);
+
+            paginated.forEach(g => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-950";
+                row.innerHTML = `
+                    <td class="p-3 font-bold text-amber-400">${g.name}</td>
+                    <td class="p-3 font-medium text-gray-500">${g.alliance === 'NONE' ? '-' : g.alliance}</td>
+                    <td class="p-3 text-center font-mono text-gray-400">${g.players}</td>
+                    <td class="p-3 text-center font-bold text-emerald-400">${g.kills}</td>
+                    <td class="p-3 text-center font-bold text-red-400">${g.deaths}</td>
+                    <td class="p-3 text-right font-black font-mono text-amber-500">${formatCompactFame(g.fame)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            if(document.getElementById('guild-start')) document.getElementById('guild-start').innerText = total === 0 ? 0 : start + 1;
+            if(document.getElementById('guild-end')) document.getElementById('guild-end').innerText = end;
+            if(document.getElementById('guild-total')) document.getElementById('guild-total').innerText = total;
+            if(document.getElementById('btn-guild-prev')) document.getElementById('btn-guild-prev').disabled = (guildCurrentPage === 1);
+            if(document.getElementById('btn-guild-next')) document.getElementById('btn-guild-next').disabled = (guildCurrentPage === totalPages);
+        }
+
+        // --- FILTER CONFIGURATIONS DROPDOWNS ---
+        function populateFilterMenus(guildsList, alliancesList) {
+            const guildContainer = document.getElementById('guild-checkbox-list');
+            const allianceContainer = document.getElementById('alliance-checkbox-list');
+            if(!guildContainer || !allianceContainer) return;
+
+            guildContainer.innerHTML = '';
+            allianceContainer.innerHTML = '';
+
+            guildsList.sort().forEach(gName => {
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-2 cursor-pointer hover:text-amber-400 py-0.5 select-none text-xs";
+                label.innerHTML = `
+                    <input type="checkbox" value="${gName}" class="accent-amber-500 rounded border-gray-800 bg-gray-900 focus:ring-0">
+                    <span class="truncate">${gName}</span>
+                `;
+                label.querySelector('input').addEventListener('change', function() {
+                    if (this.checked) selectedGuilds.add(gName);
+                    else selectedGuilds.delete(gName);
+                    playerCurrentPage = 1; 
+                    combatLogCurrentPage = 1;
+                    renderPlayerTable();
+                    renderCombatLogsTable();
+                });
+                guildContainer.appendChild(label);
+            });
+
+            alliancesList.sort().forEach(aTag => {
+                const displayName = aTag === 'NONE' ? '[No Alliance]' : aTag;
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-2 cursor-pointer hover:text-amber-400 py-0.5 select-none text-xs";
+                label.innerHTML = `
+                    <input type="checkbox" value="${aTag}" class="accent-amber-500 rounded border-gray-800 bg-gray-900 focus:ring-0">
+                    <span class="truncate">${displayName}</span>
+                `;
+                label.querySelector('input').addEventListener('change', function() {
+                    if (this.checked) selectedAlliances.add(aTag);
+                    else selectedAlliances.delete(aTag);
+                    playerCurrentPage = 1; 
+                    combatLogCurrentPage = 1;
+                    renderPlayerTable();
+                    renderCombatLogsTable();
+                });
+                allianceContainer.appendChild(label);
+            });
+        }
+
+        function clearFilterSelection(type, event) {
+            event.stopPropagation();
+            if (type === 'guild') {
+                selectedGuilds.clear();
+                document.querySelectorAll('#guild-checkbox-list input').forEach(cb => cb.checked = false);
+            } else {
+                selectedAlliances.clear();
+                document.querySelectorAll('#alliance-checkbox-list input').forEach(cb => cb.checked = false);
+            }
+            playerCurrentPage = 1; 
+            combatLogCurrentPage = 1;
+            renderPlayerTable();
+            renderCombatLogsTable();
+        }
+
+        function toggleSort(columnKey) {
+            if (activeSortColumn === columnKey) {
+                isDescending = !isDescending; 
+            } else {
+                activeSortColumn = columnKey;
+                isDescending = true; 
             }
 
-            // Initialize execution on runtime
-            processBattleboardDeconstruction();
+            ['kills', 'deaths', 'fame'].forEach(col => {
+                const icon = document.getElementById(`sort-icon-${col}`);
+                if(icon) icon.className = "fas fa-sort text-[10px] text-gray-600";
+            });
+
+            const targetedIcon = document.getElementById(`sort-icon-${columnKey}`);
+            if(targetedIcon) {
+                targetedIcon.className = isDescending ? "fas fa-sort-down text-[11px] text-amber-500" : "fas fa-sort-up text-[11px] text-amber-500";
+            }
+
+            playerCurrentPage = 1; 
+            renderPlayerTable();
+        }
+
+        function changePage(direction) {
+            playerCurrentPage += direction;
+            renderPlayerTable();
+        }
+
+        function goToPage(pageNum) {
+            playerCurrentPage = pageNum;
+            renderPlayerTable();
+        }
+
+        // --- PLAYER AGGREGATION RENDERER (RESTORED) ---
+        function renderPlayerTable() {
+            const playerTbody = document.getElementById('player-rows');
+            if(!playerTbody) return;
+            playerTbody.innerHTML = ''; 
+
+            let processedList = [...globalPlayersArray];
+
+            if (selectedGuilds.size > 0) {
+                processedList = processedList.filter(p => selectedGuilds.has(p.guildName));
+            }
+            if (selectedAlliances.size > 0) {
+                processedList = processedList.filter(p => selectedAlliances.has(p.allianceName));
+            }
+
+            processedList.sort((a, b) => {
+                return isDescending ? (b[activeSortColumn] - a[activeSortColumn]) : (a[activeSortColumn] - b[activeSortColumn]);
+            });
+
+            const totalEntries = processedList.length;
+
+            if (totalEntries === 0) {
+                playerTbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-xs text-gray-600 italic">No combatant records match filters.</td></tr>`;
+                if(document.getElementById('pagination-start')) document.getElementById('pagination-start').innerText = '0';
+                if(document.getElementById('pagination-end')) document.getElementById('pagination-end').innerText = '0';
+                if(document.getElementById('pagination-total')) document.getElementById('pagination-total').innerText = '0';
+                return;
+            }
+
+            const totalPages = Math.ceil(totalEntries / playerRowsPerPage);
+            if (playerCurrentPage > totalPages) playerCurrentPage = totalPages;
+            if (playerCurrentPage < 1) playerCurrentPage = 1;
+
+            const startIndex = (playerCurrentPage - 1) * playerRowsPerPage;
+            const endIndex = Math.min(startIndex + playerRowsPerPage, totalEntries);
+            const paginatedList = processedList.slice(startIndex, endIndex);
+
+            paginatedList.forEach(p => {
+                const allianceTag = p.allianceName === 'NONE' ? "-" : p.allianceName;
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/40 text-xs";
+                row.innerHTML = `
+                    <td class="p-3 font-bold text-gray-100 flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500"></span>
+                        ${p.name}
+                    </td>
+                    <td class="p-3 text-gray-300 font-medium">${p.guildName}</td>
+                    <td class="p-3 font-mono font-bold text-gray-500">${allianceTag}</td>
+                    <td class="p-3 text-center font-black text-emerald-400 font-mono">${p.kills}</td>
+                    <td class="p-3 text-center font-black text-red-400 font-mono">${p.deaths}</td>
+                    <td class="p-3 text-right font-black text-amber-400 font-mono">${formatCompactFame(p.fame)}</td>
+                `;
+                playerTbody.appendChild(row);
+            });
+
+            if(document.getElementById('pagination-start')) document.getElementById('pagination-start').innerText = startIndex + 1;
+            if(document.getElementById('pagination-end')) document.getElementById('pagination-end').innerText = endIndex;
+            if(document.getElementById('pagination-total')) document.getElementById('pagination-total').innerText = totalEntries;
+            if(document.getElementById('btn-prev-page')) document.getElementById('btn-prev-page').disabled = (playerCurrentPage === 1);
+            if(document.getElementById('btn-next-page')) document.getElementById('btn-next-page').disabled = (playerCurrentPage === totalPages);
+
+            const numContainer = document.getElementById('pagination-numbers');
+            if(!numContainer) return;
+            numContainer.innerHTML = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (totalPages > 5 && i !== 1 && i !== totalPages && Math.abs(i - playerCurrentPage) > 1) {
+                    if (i === 2 && playerCurrentPage > 3) {
+                        const dots = document.createElement('span');
+                        dots.className = "px-1 text-gray-600"; dots.innerText = "...";
+                        numContainer.appendChild(dots);
+                        i = playerCurrentPage - 2;
+                    } else if (i === playerCurrentPage + 1 && playerCurrentPage < totalPages - 2) {
+                        const dots = document.createElement('span');
+                        dots.className = "px-1 text-gray-600"; dots.innerText = "...";
+                        numContainer.appendChild(dots);
+                        i = totalPages - 1;
+                    }
+                    continue;
+                }
+                const pageBtn = document.createElement('button');
+                pageBtn.innerText = i;
+                pageBtn.className = (i === playerCurrentPage) ? "px-2 py-0.5 rounded bg-amber-500 text-gray-950 font-bold text-[11px]" : "px-2 py-0.5 rounded bg-gray-900 border border-gray-800 text-gray-400 text-[11px]";
+                if(i !== playerCurrentPage) pageBtn.onclick = () => goToPage(i);
+                numContainer.appendChild(pageBtn);
+            }
+        }
+
+        // --- INDEPENDENT COMBAT AUDIT LOGS WITH WEAPON RENDER SYSTEM ---
+        function changeCombatLogPage(direction) {
+            combatLogCurrentPage += direction;
+            renderCombatLogsTable();
+        }
+
+        function goToCombatLogPage(pageNum) {
+            combatLogCurrentPage = pageNum;
+            renderCombatLogsTable();
+        }
+
+        function renderCombatLogsTable() {
+            const tbody = document.getElementById('combat-log-rows');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            // Apply shared active checkbox criteria filters to logs stream
+            let filteredLogs = [...globalCombatLogsArray];
+            if (selectedGuilds.size > 0) {
+                filteredLogs = filteredLogs.filter(log => selectedGuilds.has(log.killerGuild) || selectedGuilds.has(log.victimGuild));
+            }
+            if (selectedAlliances.size > 0) {
+                filteredLogs = filteredLogs.filter(log => selectedAlliances.has(log.killerAlliance) || selectedAlliances.has(log.victimAlliance));
+            }
+
+            const totalEntries = filteredLogs.length;
+
+            if (totalEntries === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-xs text-gray-600 italic">No combat log streams matched your criteria.</td></tr>`;
+                if(document.getElementById('log-pagination-start')) document.getElementById('log-pagination-start').innerText = '0';
+                if(document.getElementById('log-pagination-end')) document.getElementById('log-pagination-end').innerText = '0';
+                if(document.getElementById('log-pagination-total')) document.getElementById('log-pagination-total').innerText = '0';
+                return;
+            }
+
+            const totalPages = Math.ceil(totalEntries / combatLogRowsPerPage);
+            if (combatLogCurrentPage > totalPages) combatLogCurrentPage = totalPages;
+            if (combatLogCurrentPage < 1) combatLogCurrentPage = 1;
+
+            const startIndex = (combatLogCurrentPage - 1) * combatLogRowsPerPage;
+            const endIndex = Math.min(startIndex + combatLogRowsPerPage, totalEntries);
+            const paginatedList = filteredLogs.slice(startIndex, endIndex);
+
+            // Standard asset renderer mapping engine shortcut wrapper
+            const buildImageMarkup = (weaponSig) => {
+                if (!weaponSig) {
+                    return `<div class="w-8 h-8 rounded bg-gray-800/80 border border-gray-700 flex items-center justify-center text-[9px] text-gray-500 italic">Naked</div>`;
+                }
+                return `<img src="https://render.albiononline.com/v1/item/${weaponSig}.png?size=32" alt="Weapon" class="w-8 h-8 object-contain bg-gray-950/40 rounded border border-gray-800" onerror="this.style.display='none'">`;
+            };
+
+            paginatedList.forEach(log => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/40 text-xs";
+                row.innerHTML = `
+                    <td class="p-3">
+                        <div class="flex items-center gap-3">
+                            ${buildImageMarkup(log.killerWeapon)}
+                            <div>
+                                <div class="font-bold text-emerald-400">${log.killerName}</div>
+                                <div class="text-[10px] text-gray-500 font-normal">[${log.killerAlliance}] ${log.killerGuild}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-3 text-center font-mono text-gray-300 font-bold bg-emerald-500/5">${log.killerIp} IP</td>
+                    
+                    <td class="p-3">
+                        <div class="flex items-center gap-3">
+                            ${buildImageMarkup(log.victimWeapon)}
+                            <div>
+                                <div class="font-bold text-red-400">${log.victimName}</div>
+                                <div class="text-[10px] text-gray-500 font-normal">[${log.victimAlliance}] ${log.victimGuild}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-3 text-center font-mono text-gray-400 bg-red-500/5">${log.victimIp} IP</td>
+                    
+                    <td class="p-3 text-right font-black font-mono text-amber-500">${log.fame.toLocaleString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Update dedicated UI elements for log data streams if present in HTML markup
+            if(document.getElementById('log-pagination-start')) document.getElementById('log-pagination-start').innerText = startIndex + 1;
+            if(document.getElementById('log-pagination-end')) document.getElementById('log-pagination-end').innerText = endIndex;
+            if(document.getElementById('log-pagination-total')) document.getElementById('log-pagination-total').innerText = totalEntries;
+            if(document.getElementById('btn-log-prev')) document.getElementById('btn-log-prev').disabled = (combatLogCurrentPage === 1);
+            if(document.getElementById('btn-log-next')) document.getElementById('btn-log-next').disabled = (combatLogCurrentPage === totalPages);
+
+            const numContainer = document.getElementById('log-pagination-numbers');
+            if(!numContainer) return;
+            numContainer.innerHTML = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (totalPages > 5 && i !== 1 && i !== totalPages && Math.abs(i - combatLogCurrentPage) > 1) {
+                    if (i === 2 && combatLogCurrentPage > 3) {
+                        const dots = document.createElement('span');
+                        dots.className = "px-1 text-gray-600"; dots.innerText = "...";
+                        numContainer.appendChild(dots);
+                        i = combatLogCurrentPage - 2;
+                    } else if (i === combatLogCurrentPage + 1 && combatLogCurrentPage < totalPages - 2) {
+                        const dots = document.createElement('span');
+                        dots.className = "px-1 text-gray-600"; dots.innerText = "...";
+                        numContainer.appendChild(dots);
+                        i = totalPages - 1;
+                    }
+                    continue;
+                }
+                const pageBtn = document.createElement('button');
+                pageBtn.innerText = i;
+                pageBtn.className = (i === combatLogCurrentPage) ? "px-2 py-0.5 rounded bg-amber-500 text-gray-950 font-bold text-[11px]" : "px-2 py-0.5 rounded bg-gray-900 border border-gray-800 text-gray-400 text-[11px]";
+                if(i !== combatLogCurrentPage) pageBtn.onclick = () => goToCombatLogPage(i);
+                numContainer.appendChild(pageBtn);
+            }
+        }
+
+        function renderErrorState(customErrorMessage) {
+            const errText = document.getElementById('error-message-text');
+            if(errText) errText.innerText = customErrorMessage;
+            if(document.getElementById('detail-loading')) document.getElementById('detail-loading').classList.add('hidden');
+            if(document.getElementById('detail-content')) document.getElementById('detail-content').classList.add('hidden');
+            if(document.getElementById('error-panel')) document.getElementById('error-panel').classList.remove('hidden');
+        }
+
+        processBattleboardDeconstruction();
     </script>
 </body>
 </html>
