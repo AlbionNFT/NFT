@@ -340,7 +340,9 @@
 
         function getQueryBattleId() {
             const params = new URLSearchParams(window.location.search);
-            return params.get('EventId');
+            // Checks for ?EventId= or ?BattleId= in the URL string
+            return params.get('EventId') || params.get('BattleId');
+
         }
 
         function toggleDropdown(dropdownId, event) {
