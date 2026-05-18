@@ -16,26 +16,39 @@
             const ids = params.get('ids');
 
             if (ids) {
+                // Clean up the IDs string to locate the matching image path name
                 const safeFileName = ids.split(',').map(id => id.trim()).join('_');
                 const githubUser = "AlbionNFT"; 
                 const githubRepo = "NFT";
                 
-                // 1. Define the static URL where GitHub will save the image
+                // Location where GitHub Actions saves the generated image frames
                 const staticImgUrl = `https://raw.githubusercontent.com/${githubUser}/${githubRepo}/main/battle-images/summary_${safeFileName}.png`;
                 
-                // Inject the static image meta tag for Discord
+                // Hand the raw link directly to Discord's preview wrapper frame
                 const ogImage = document.createElement('meta');
                 ogImage.setAttribute('property', 'og:image');
                 ogImage.setAttribute('content', staticImgUrl);
                 document.head.appendChild(ogImage);
 
-                // 2. Background check: If this image is new, trigger the GitHub Action execution
+                // Run a background availability check on your repository asset folder
                 fetch(staticImgUrl, { method: 'HEAD' })
                     .then(res => {
                         if (res.status === 404) {
-                            // Image doesn't exist yet! Ping GitHub Actions to generate it in the background
-                            // Note: For public repos, repository_dispatch can be triggered via webhooks or a fine-grained token
-                            console.log("New ID combination detected. Dispatched automated generation workflow to GitHub.");
+                            console.log("New ID matrix combo detected. Launching repository dispatch pipelines...");
+                            
+                            // Trigger the background workflow runner and safely pass the client payload variables
+                            fetch(`https://api.github.com/repos/${githubUser}/${githubRepo}/dispatches`, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/vnd.github.v3+json',
+                                    // Replace your public-safe fine-grained token signature below
+                                    'Authorization': 'token github_pat_YOUR_FINE_GRAINED_TOKEN_HERE'
+                                },
+                                body: JSON.stringify({
+                                    event_type: 'capture_summary_table',
+                                    client_payload: { ids: ids } // Handing the exact ?ids= string to process.env.BATTLE_IDS!
+                                })
+                            }).catch(err => console.error("Dispatch failure:", err));
                         }
                     }).catch(() => {});
             }

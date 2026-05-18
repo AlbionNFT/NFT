@@ -7,7 +7,7 @@
     
     <meta property="og:title" content="No Free Thinkers | Multiple Battleboard" />
     <meta property="og:type" content="website" />
-    <meta property="og:description" content="Aggregated Battle Report - Live Alliance & Combat Performance Tallies." />
+    <meta property="og:description" content="Consolidated Alliance Performance Report Metrics." />
     <meta name="theme-color" content="#fbbf24" />
 
     <script>
@@ -16,28 +16,41 @@
             const ids = params.get('ids');
 
             if (ids) {
-                // Point the scraper directly to the dedicated snapshot template file instead of the main page
-                const targetUrl = `https://albionnft.github.io/NFT/embed-card.html?ids=${ids}`;
-                const encodedUrl = encodeURIComponent(targetUrl);
+                // Clean up the IDs string to locate the matching image path name
+                const safeFileName = ids.split(',').map(id => id.trim()).join('_');
+                const githubUser = "AlbionNFT"; 
+                const githubRepo = "NFT";
                 
-                // Microlink takes a full-page capture of this mini-dashboard page
-                const captureService = `https://api.microlink.io/?url=${encodedUrl}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=630&waitFor=3500`;
+                // Location where GitHub Actions saves the generated image frames
+                const staticImgUrl = `https://raw.githubusercontent.com/${githubUser}/${githubRepo}/main/battle-images/summary_${safeFileName}.png`;
                 
+                // Hand the raw link directly to Discord's preview wrapper frame
                 const ogImage = document.createElement('meta');
                 ogImage.setAttribute('property', 'og:image');
-                ogImage.setAttribute('content', captureService);
+                ogImage.setAttribute('content', staticImgUrl);
                 document.head.appendChild(ogImage);
-                
-                // Canvas Dimension Rules
-                const ogImageWidth = document.createElement('meta');
-                ogImageWidth.setAttribute('property', 'og:image:width');
-                ogImageWidth.setAttribute('content', '1200');
-                document.head.appendChild(ogImageWidth);
 
-                const ogImageHeight = document.createElement('meta');
-                ogImageHeight.setAttribute('property', 'og:image:height');
-                ogImageHeight.setAttribute('content', '630');
-                document.head.appendChild(ogImageHeight);
+                // Run a background availability check on your repository asset folder
+                fetch(staticImgUrl, { method: 'HEAD' })
+                    .then(res => {
+                        if (res.status === 404) {
+                            console.log("New ID matrix combo detected. Launching repository dispatch pipelines...");
+                            
+                            // Trigger the background workflow runner and safely pass the client payload variables
+                            fetch(`https://api.github.com/repos/${githubUser}/${githubRepo}/dispatches`, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/vnd.github.v3+json',
+                                    // Replace your public-safe fine-grained token signature below
+                                    'Authorization': 'token github_pat_YOUR_FINE_GRAINED_TOKEN_HERE'
+                                },
+                                body: JSON.stringify({
+                                    event_type: 'capture_summary_table',
+                                    client_payload: { ids: ids } // Handing the exact ?ids= string to process.env.BATTLE_IDS!
+                                })
+                            }).catch(err => console.error("Dispatch failure:", err));
+                        }
+                    }).catch(() => {});
             }
         })();
     </script>

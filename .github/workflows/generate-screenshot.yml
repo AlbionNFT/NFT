@@ -2,8 +2,7 @@ name: Dynamic Capture Engine
 
 on:
   repository_dispatch:
-  workflow_dispatch:
-    types: [capture_summary_table] # Triggered automatically via API webhook
+    types: [capture_summary_table] # Listens for the ping from your website HTML
 
 jobs:
   screenshot:
@@ -22,6 +21,7 @@ jobs:
 
     - name: Run Snapshot Capture Script
       env:
+        # This safely extracts the payload variable sent from your website's script
         BATTLE_IDS: ${{ github.event.client_payload.ids }}
       run: node snap-alliance.js
 
@@ -31,4 +31,4 @@ jobs:
         git config --global user.email "actions@github.com"
         git add battle-images/*.png
         git commit -m "Automated System Update: Generated battle summary image [skip ci]" || exit 0
-        git pushs
+        git push
