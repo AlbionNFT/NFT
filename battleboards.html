@@ -90,19 +90,15 @@
                         <p class="text-xs text-gray-500 mt-0.5">Most recent tracked guild operations across zones.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                        <div class="flex items-center space-x-2 bg-gray-950/60 border border-gray-800 px-3 py-1.5 rounded-lg text-xs">
-                            <span class="text-gray-400 font-medium"><i class="fas fa-filter mr-1 text-amber-500/80"></i> Min Total Players:</span>
-                            <select id="filter-min-players" onchange="handleFilterChange()" class="bg-transparent text-amber-400 font-bold focus:outline-none cursor-pointer pr-2">
-                                <option value="0" class="bg-gray-950 text-gray-300">All Battles</option>
-                                <option value="5" class="bg-gray-950 text-gray-300">5+ Total Players</option>
-                                <option value="10" class="bg-gray-950 text-gray-300">10+ Total Players</option>
-                                <option value="15" class="bg-gray-950 text-gray-300">15+ Total Players</option>
-                                <option value="20" class="bg-gray-950 text-gray-300">20+ Total Players</option>
-                            </select>
+                        
+                        <div class="flex items-center space-x-2 bg-gray-950/60 border border-gray-800 pl-3 pr-1 py-1 rounded-lg text-xs w-full sm:w-auto">
+                            <span class="text-gray-400 font-medium"><i class="fas fa-users mr-1 text-amber-500/80"></i> Total Event Players:</span>
+                            <input id="filter-total-players" type="number" min="0" placeholder="0" onkeydown="if(event.key==='.'){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,'');" class="bg-transparent text-amber-400 font-bold focus:outline-none placeholder-gray-600 w-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                            <button onclick="handleFilterChange()" class="bg-amber-500 hover:bg-amber-400 text-gray-950 font-black px-3 py-1 rounded-md transition-colors cursor-pointer uppercase tracking-wider text-[10px]">
+                                Filter
+                            </button>
                         </div>
-                        <span class="bg-amber-500/10 text-amber-400 text-xs px-3 py-1.5 rounded-lg font-semibold border border-amber-500/20 whitespace-nowrap">
-                            Target Guild : NoFreeThinkers
-                        </span>
+                        
                     </div>
                 </div>
                 
@@ -224,7 +220,6 @@
         return events.map(event => {
             const battleId = event.EventId;
             const startTime = event.TimeStamp;
-            
             const players = {};
 
             if (event.Killer) {
@@ -278,19 +273,19 @@
     }
 
     function applyFilters() {
-        const inputElement = document.getElementById('filter-min-players');
-        const minPlayers = (inputElement && inputElement.value !== "") ? parseInt(inputElement.value, 10) : 0;
-        
-        if (minPlayers <= 0 || isNaN(minPlayers)) {
+        const inputElement = document.getElementById('filter-total-players');
+        const minTotalPlayers = (inputElement && inputElement.value !== "") ? parseInt(inputElement.value, 10) : 0;
+
+        if (isNaN(minTotalPlayers) || minTotalPlayers <= 0) {
             filteredBattles = [...allBattlesCache];
         } else {
             filteredBattles = allBattlesCache.filter(battle => {
-                let totalPlayerCount = 0;
+                let totalEventPlayerCount = 0;
                 if (battle.players) {
-                    // Counts total unique player IDs associated across the entire combat log structure
-                    totalPlayerCount = Object.keys(battle.players).length;
+                    // Accurately counts every single unique participant inside the mapped event block
+                    totalEventPlayerCount = Object.keys(battle.players).length;
                 }
-                return totalPlayerCount >= minPlayers;
+                return totalEventPlayerCount >= minTotalPlayers;
             });
         }
     }
