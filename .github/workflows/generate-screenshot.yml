@@ -2,6 +2,7 @@ name: Dynamic Capture Engine
 
 on:
   repository_dispatch:
+  workflow_dispatch:
     types: [capture_summary_table] # Triggered automatically via API webhook
 
 jobs:
