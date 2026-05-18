@@ -91,12 +91,9 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                         
-                        <div class="flex items-center space-x-2 bg-gray-950/60 border border-gray-800 pl-3 pr-1 py-1 rounded-lg text-xs w-full sm:w-auto">
-                            <span class="text-gray-400 font-medium"><i class="fas fa-users mr-1 text-amber-500/80"></i> Total Event Players:</span>
-                            <input id="filter-total-players" type="number" min="0" placeholder="0" onkeydown="if(event.key==='.'){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,'');" class="bg-transparent text-amber-400 font-bold focus:outline-none placeholder-gray-600 w-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
-                            <button onclick="handleFilterChange()" class="bg-amber-500 hover:bg-amber-400 text-gray-950 font-black px-3 py-1 rounded-md transition-colors cursor-pointer uppercase tracking-wider text-[10px]">
-                                Filter
-                            </button>
+                        <div class="flex items-center space-x-2 bg-gray-950/60 border border-gray-800 px-3 py-1.5 rounded-lg text-xs w-full sm:w-auto">
+                            <span class="text-gray-400 font-medium"><i class="fas fa-users mr-1 text-amber-500/80"></i> Min Event Players:</span>
+                            <input id="filter-total-players" type="number" min="0" placeholder="Type a number..." onkeydown="if(event.key==='.'){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); handleLiveFilterChange();" class="bg-transparent text-amber-400 font-bold focus:outline-none placeholder-gray-600 w-28 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                         </div>
                         
                     </div>
@@ -282,7 +279,6 @@
             filteredBattles = allBattlesCache.filter(battle => {
                 let totalEventPlayerCount = 0;
                 if (battle.players) {
-                    // Accurately counts every single unique participant inside the mapped event block
                     totalEventPlayerCount = Object.keys(battle.players).length;
                 }
                 return totalEventPlayerCount >= minTotalPlayers;
@@ -290,7 +286,8 @@
         }
     }
 
-    function handleFilterChange() {
+    // Triggers instantly on keystroke changes instead of requiring a explicit action button event
+    function handleLiveFilterChange() {
         currentPage = 1; 
         applyFilters();
         displayCurrentPage();
