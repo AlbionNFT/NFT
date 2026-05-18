@@ -371,14 +371,28 @@
                 if (!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
                 let parsedData = await res.json();
                 
+                // 1. STABILIZE PAYLOAD ACQUISITION
+                // If your JSON wrapper returns an object containing the array, target it here
+                let battlesArray = [];
                 if (Array.isArray(parsedData)) {
-                    parsedData.sort((a, b) => {
-                        return new Date(b.startTime || 0) - new Date(a.startTime || 0);
-                    });
+                    battlesArray = parsedData;
+                } else if (parsedData && typeof parsedData === 'object' && Array.isArray(parsedData.battles)) {
+                    battlesArray = parsedData.battles; // Fallback for { "battles": [...] } structures
+                } else if (parsedData && typeof parsedData === 'object') {
+                    // Fallback case: if battles are indexed by keys in an object
+                    battlesArray = Object.values(parsedData);
+                } else {
+                    throw new Error("Parsed JSON structure does not contain a valid collection list.");
                 }
                 
-                allBattlesCache = parsedData;
-                filteredBattlesCache = [...allBattlesCache]; // Clone basic payload data configuration mapping values
+                // 2. SORT THE UNWRAPPED ARRAY Safely
+                battlesArray.sort((a, b) => {
+                    return new Date(b.startTime || 0) - new Date(a.startTime || 0);
+                });
+                
+                // 3. ASSIGN TO CACHE
+                allBattlesCache = battlesArray;
+                filteredBattlesCache = [...allBattlesCache]; 
                 
                 document.getElementById('log-loading').classList.add('hidden');
                 document.getElementById('battleboards-container').classList.remove('hidden');
