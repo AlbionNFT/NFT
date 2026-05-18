@@ -3,6 +3,7 @@ name: Dynamic Capture Engine
 on:
   repository_dispatch:
     types: [capture_summary_table] # Listens for the ping from your website HTML
+  workflow_dispatch: # Allows you to also run it manually from GitHub actions UI for testing
 
 jobs:
   screenshot:
@@ -16,13 +17,13 @@ jobs:
       with:
         node-version: 20
 
-    - name: Install Puppeteer Browser
+    - name: Install Puppeteer Browser Dependencies
       run: npm install puppeteer
 
     - name: Run Snapshot Capture Script
       env:
-        # This safely extracts the payload variable sent from your website's script
-        BATTLE_IDS: ${{ github.event.client_payload.ids }}
+        # Maps the repository dispatch payload, fallback to empty string if missing
+        BATTLE_IDS: ${{ github.event.client_payload.ids || '' }}
       run: node snap-alliance.js
 
     - name: Commit and Push Image Asset
