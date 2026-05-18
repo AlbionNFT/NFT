@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Single-Battle Analytics | NoFreeThinkers</title>
+    <title>Multi-Battle Aggregator | NoFreeThinkers</title>
     
-    <meta property="og:title" content="🛡️ No Free Thinkers | Live Battle Summary" />
+    <meta property="og:title" content="🛡️ No Free Thinkers | Cumulative Battle Summaries" />
     <meta property="og:type" content="website" />
     <meta name="theme-color" content="#fbbf24" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -15,7 +15,7 @@
             background: rgba(17, 24, 39, 0.55);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);    
         }
         .glass-nav {
             background: rgba(15, 23, 42, 0.7);
@@ -42,6 +42,7 @@
         }
         .custom-scroll::-webkit-scrollbar {
             width: 4px;
+            height: 4px;
         }
         .custom-scroll::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.2);
@@ -249,6 +250,37 @@
                 </div>
             </div>
 
+            <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl border border-gray-900/80">
+                <div class="p-5 bg-gray-900/30 border-b border-gray-800/60 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-white tracking-wide">Aggregated Real-time Combat Events</h3>
+                        <p class="text-[11px] text-gray-500 mt-0.5">Chronological kill tracking merged across all specified context sessions.</p>
+                    </div>
+                    <span id="kill-count-badge" class="bg-gray-950 border border-gray-800 text-gray-400 text-[11px] px-2.5 py-1 rounded-md font-mono">0 Logged Incidents</span>
+                </div>
+                <div class="overflow-x-auto min-h-[300px]">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-gray-900 text-gray-400 font-bold uppercase tracking-wider bg-gray-900/20">
+                                <th class="p-4 min-w-[220px]">Killer Identity / Arsenal</th>
+                                <th class="p-4 text-center w-[90px]">Killer IP</th>
+                                <th class="p-4 min-w-[220px]">Victim Identity / Equipment</th>
+                                <th class="p-4 text-center w-[90px]">Victim IP</th>
+                                <th class="p-4 text-right min-w-[130px]">Fame Reaped</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kill-stream-rows" class="divide-y divide-gray-900/60 text-gray-300"></tbody>
+                    </table>
+                </div>
+                <div class="p-4 bg-gray-950/40 border-t border-gray-900 flex items-center justify-between text-xs text-gray-400">
+                    <span id="kill-page-info">Page 1 of 1</span>
+                    <div class="flex gap-1">
+                        <button onclick="changePage('kill', -1)" id="btn-kill-prev" class="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded-md hover:text-amber-400 disabled:opacity-30 disabled:hover:text-gray-400 transition-colors cursor-pointer">Previous</button>
+                        <button onclick="changePage('kill', 1)" id="btn-kill-next" class="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded-md hover:text-amber-400 disabled:opacity-30 disabled:hover:text-gray-400 transition-colors cursor-pointer">Next</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <div id="error-panel" class="hidden max-w-xl mx-auto glass-panel p-8 rounded-2xl border border-red-500/20 bg-red-950/5 text-center space-y-4">
@@ -279,6 +311,7 @@
         let globalAlliancesArray = [];
         let globalGuildsArray = [];
         let globalPlayersArray = [];
+        let globalKillsArray = [];
         
         let activeSortColumn = 'fame'; 
         let isDescending = true;
@@ -292,7 +325,8 @@
         let currentPageTracker = {
             alliance: 1,
             guild: 1,
-            player: 1
+            player: 1,
+            kill: 1
         };
 
         function formatCompactFame(num) {
@@ -358,6 +392,14 @@
             };
         }
 
+        function renderErrorState(msg) {
+            document.getElementById('detail-loading').classList.add('hidden');
+            document.getElementById('detail-content').classList.add('hidden');
+            const errPanel = document.getElementById('error-panel');
+            document.getElementById('error-message-text').innerText = msg;
+            errPanel.classList.remove('hidden');
+        }
+
         async function processMultiBattleAggregation() {
             const targetIds = getQueryBattleIds();
             if (targetIds.length === 0) {
@@ -389,6 +431,7 @@
                 let allianceCombinedMap = {};
                 let guildCombinedMap = {};
                 let playerCombinedMap = {};
+                let combinedEvents = [];
 
                 targetedBattles.forEach(battle => {
                     const playersArray = battle.players ? Object.values(battle.players) : [];
@@ -421,18 +464,34 @@
                         playerCombinedMap[characterName].deaths += (p.deaths || 0);
                         playerCombinedMap[characterName].fame += (p.killFame || 0);
                     });
+
+                    // Flatten kill event logs across matches
+                    if (battle.events && Array.isArray(battle.events)) {
+                        battle.events.forEach(ev => {
+                            combinedEvents.push({
+                                ...ev,
+                                battleSourceId: battle.id,
+                                timestampParsed: ev.time ? new Date(ev.time).getTime() : 0
+                            });
+                        });
+                    }
                 });
 
                 globalAlliancesArray = Object.values(allianceCombinedMap).sort((a,b) => b.fame - a.fame);
                 globalGuildsArray = Object.values(guildCombinedMap).sort((a,b) => b.fame - a.fame);
                 globalPlayersArray = Object.values(playerCombinedMap);
+                
+                // Sort combined kill logs chronologically (newest first)
+                globalKillsArray = combinedEvents.sort((a, b) => b.timestampParsed - a.timestampParsed);
+                document.getElementById('kill-count-badge').innerText = `${globalKillsArray.length} Registered Kills Indexed`;
 
                 recalculateTotalCombatantMetrics();
-
                 populateFilterMenus(Object.keys(guildCombinedMap), Object.keys(allianceCombinedMap));
+                
                 renderAllianceTable();
                 renderGuildTable();
                 renderPlayerTable();
+                renderKillStreamTable();
 
                 document.getElementById('detail-loading').classList.add('hidden');
                 document.getElementById('detail-content').classList.remove('hidden');
@@ -458,7 +517,9 @@
                     if (this.checked) selectedGuilds.add(guildName);
                     else selectedGuilds.delete(guildName);
                     currentPageTracker.player = 1; 
+                    currentPageTracker.kill = 1;
                     renderPlayerTable();
+                    renderKillStreamTable();
                 });
                 guildContainer.appendChild(label);
             });
@@ -475,7 +536,9 @@
                     if (this.checked) selectedAlliances.add(allianceTag);
                     else selectedAlliances.delete(allianceTag);
                     currentPageTracker.player = 1; 
+                    currentPageTracker.kill = 1;
                     renderPlayerTable();
+                    renderKillStreamTable();
                 });
                 allianceContainer.appendChild(label);
             });
@@ -491,7 +554,9 @@
                 document.querySelectorAll('#alliance-checkbox-list input').forEach(cb => cb.checked = false);
             }
             currentPageTracker.player = 1;
+            currentPageTracker.kill = 1;
             renderPlayerTable();
+            renderKillStreamTable();
         }
 
         function toggleSort(columnKey) {
@@ -513,6 +578,14 @@
             renderPlayerTable();
         }
 
+        function changePage(tableKey, delta) {
+            currentPageTracker[tableKey] += delta;
+            if (tableKey === 'alliance') renderAllianceTable();
+            if (tableKey === 'guild') renderGuildTable();
+            if (tableKey === 'player') renderPlayerTable();
+            if (tableKey === 'kill') renderKillStreamTable();
+        }
+
         function renderAllianceTable() {
             const allianceTbody = document.getElementById('alliance-rows');
             allianceTbody.innerHTML = '';
@@ -521,31 +594,32 @@
             const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
             
             if (currentPageTracker.alliance > totalPages) currentPageTracker.alliance = totalPages;
+            if (currentPageTracker.alliance < 1) currentPageTracker.alliance = 1;
             
             const startIdx = (currentPageTracker.alliance - 1) * ITEMS_PER_PAGE;
-            const endIdx = startIdx + ITEMS_PER_PAGE;
-            const paginatedItems = globalAlliancesArray.slice(startIdx, endIdx);
-
-            if (paginatedItems.length === 0) {
-                allianceTbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-600 italic">No alliance logs recorded.</td></tr>`;
-            } else {
-                paginatedItems.forEach(a => {
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-950";
-                    row.innerHTML = `
-                        <td class="p-3 font-bold text-gray-200">${a.name === 'NONE' ? '<span class="text-gray-600 italic">[No Alliance]</span>' : a.name}</td>
-                        <td class="p-3 text-center font-medium font-mono text-gray-400">${a.uniquePlayers.size}</td>
-                        <td class="p-3 text-center font-bold text-emerald-400">${a.kills}</td>
-                        <td class="p-3 text-center font-bold text-red-400">${a.deaths}</td>
-                        <td class="p-3 text-right font-black font-mono text-gray-400">${formatCompactFame(a.fame)}</td>
-                    `;
-                    allianceTbody.appendChild(row);
-                });
-            }
+            const paginatedItems = globalAlliancesArray.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
             document.getElementById('alliance-page-info').innerText = `Page ${currentPageTracker.alliance} of ${totalPages}`;
-            document.getElementById('btn-alliance-prev').disabled = (currentPageTracker.alliance === 1);
-            document.getElementById('btn-alliance-next').disabled = (currentPageTracker.alliance === totalPages);
+            document.getElementById('btn-alliance-prev').disabled = currentPageTracker.alliance === 1;
+            document.getElementById('btn-alliance-next').disabled = currentPageTracker.alliance === totalPages;
+
+            if (paginatedItems.length === 0) {
+                allianceTbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-600 italic">No alliance records found.</td></tr>`;
+                return;
+            }
+
+            paginatedItems.forEach(a => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-900/40";
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-gray-200">${a.name === 'NONE' ? '<span class="text-gray-600">[No Alliance]</span>' : a.name}</td>
+                    <td class="p-3 text-center text-gray-400 font-mono">${a.uniquePlayers.size}</td>
+                    <td class="p-3 text-center font-bold text-emerald-500 font-mono">${a.kills}</td>
+                    <td class="p-3 text-center text-red-400 font-mono">${a.deaths}</td>
+                    <td class="p-3 text-right text-amber-400 font-mono font-bold">${formatCompactFame(a.fame)}</td>
+                `;
+                allianceTbody.appendChild(tr);
+            });
         }
 
         function renderGuildTable() {
@@ -554,114 +628,157 @@
 
             const totalItems = globalGuildsArray.length;
             const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
-
+            
             if (currentPageTracker.guild > totalPages) currentPageTracker.guild = totalPages;
-
+            if (currentPageTracker.guild < 1) currentPageTracker.guild = 1;
+            
             const startIdx = (currentPageTracker.guild - 1) * ITEMS_PER_PAGE;
-            const endIdx = startIdx + ITEMS_PER_PAGE;
-            const paginatedItems = globalGuildsArray.slice(startIdx, endIdx);
-
-            if (paginatedItems.length === 0) {
-                guildTbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-600 italic">No guild logs recorded.</td></tr>`;
-            } else {
-                paginatedItems.forEach(g => {
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-950";
-                    row.innerHTML = `
-                        <td class="p-3 font-bold text-amber-400">${g.name}</td>
-                        <td class="p-3 font-medium text-gray-500">${g.alliance === 'NONE' ? '-' : g.alliance}</td>
-                        <td class="p-3 text-center font-medium font-mono text-gray-400">${g.uniquePlayers.size}</td>
-                        <td class="p-3 text-center font-bold text-emerald-400">${g.kills}</td>
-                        <td class="p-3 text-center font-bold text-red-400">${g.deaths}</td>
-                        <td class="p-3 text-right font-black font-mono text-gray-400">${formatCompactFame(g.fame)}</td>
-                    `;
-                    guildTbody.appendChild(row);
-                });
-            }
+            const paginatedItems = globalGuildsArray.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
             document.getElementById('guild-page-info').innerText = `Page ${currentPageTracker.guild} of ${totalPages}`;
-            document.getElementById('btn-guild-prev').disabled = (currentPageTracker.guild === 1);
-            document.getElementById('btn-guild-next').disabled = (currentPageTracker.guild === totalPages);
+            document.getElementById('btn-guild-prev').disabled = currentPageTracker.guild === 1;
+            document.getElementById('btn-guild-next').disabled = currentPageTracker.guild === totalPages;
+
+            if (paginatedItems.length === 0) {
+                guildTbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-600 italic">No guild records found.</td></tr>`;
+                return;
+            }
+
+            paginatedItems.forEach(g => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-900/20 transition-colors border-b border-gray-900/40";
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-white">${g.name}</td>
+                    <td class="p-3 text-gray-400">${g.alliance === 'NONE' ? '-' : g.alliance}</td>
+                    <td class="p-3 text-center text-gray-400 font-mono">${g.uniquePlayers.size}</td>
+                    <td class="p-3 text-center font-bold text-emerald-500 font-mono">${g.kills}</td>
+                    <td class="p-3 text-center text-red-400 font-mono">${g.deaths}</td>
+                    <td class="p-3 text-right text-amber-400 font-mono font-bold">${formatCompactFame(g.fame)}</td>
+                `;
+                guildTbody.appendChild(tr);
+            });
         }
 
         function renderPlayerTable() {
             const playerTbody = document.getElementById('player-rows');
-            playerTbody.innerHTML = ''; 
+            playerTbody.innerHTML = '';
 
-            let processedList = [...globalPlayersArray];
-
-            if (selectedGuilds.size > 0) {
-                processedList = processedList.filter(p => selectedGuilds.has(p.guild));
-            }
-            if (selectedAlliances.size > 0) {
-                processedList = processedList.filter(p => selectedAlliances.has(p.alliance));
-            }
-
-            processedList.sort((a, b) => {
-                return isDescending ? (b[activeSortColumn] - a[activeSortColumn]) : (a[activeSortColumn] - b[activeSortColumn]);
+            // Apply dropdown selection logic
+            let filtered = globalPlayersArray.filter(p => {
+                if (selectedGuilds.size > 0 && !selectedGuilds.has(p.guild)) return false;
+                if (selectedAlliances.size > 0 && !selectedAlliances.has(p.alliance)) return false;
+                return true;
             });
 
-            const totalItems = processedList.length;
-            const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+            // Structural Sorting Loop
+            filtered.sort((a, b) => {
+                let vA = activeSortColumn === 'fame' ? a.fame : (activeSortColumn === 'kills' ? a.kills : a.deaths);
+                let vB = activeSortColumn === 'fame' ? b.fame : (activeSortColumn === 'kills' ? b.kills : b.deaths);
+                return isDescending ? vB - vA : vA - vB;
+            });
 
+            const totalItems = filtered.length;
+            const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+            
             if (currentPageTracker.player > totalPages) currentPageTracker.player = totalPages;
+            if (currentPageTracker.player < 1) currentPageTracker.player = 1;
 
             const startIdx = (currentPageTracker.player - 1) * ITEMS_PER_PAGE;
-            const endIdx = startIdx + ITEMS_PER_PAGE;
-            const paginatedItems = processedList.slice(startIdx, endIdx);
+            const paginatedItems = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
-            if (processedList.length === 0) {
-                playerTbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="p-8 text-center text-xs text-gray-600 italic tracking-wide">
-                            No combatant records match your custom checkbox parameters selections.
-                        </td>
-                    </tr>`;
-                document.getElementById('player-page-info').innerText = `Page 1 of 1`;
-                document.getElementById('btn-player-prev').disabled = true;
-                document.getElementById('btn-player-next').disabled = true;
+            document.getElementById('player-page-info').innerText = `Showing ${startIdx + 1}-${Math.min(startIdx + ITEMS_PER_PAGE, totalItems)} of ${totalItems} Players`;
+            document.getElementById('btn-player-prev').disabled = currentPageTracker.player === 1;
+            document.getElementById('btn-player-next').disabled = currentPageTracker.player === totalPages;
+
+            if (paginatedItems.length === 0) {
+                playerTbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 italic">No combatants match active criteria selection filters.</td></tr>`;
                 return;
             }
 
             paginatedItems.forEach(p => {
-                const allianceTag = p.alliance === 'NONE' ? "-" : p.alliance;
-                const row = document.createElement('tr');
-                row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/40";
-                row.innerHTML = `
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/60";
+                tr.innerHTML = `
                     <td class="p-4 font-bold text-gray-100 flex items-center gap-2">
-                        <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-red-500 to-amber-500"></span>
-                        ${p.name}
+                        <i class="fas fa-user text-gray-700 text-xs"></i>
+                        <span>${p.name}</span>
                     </td>
-                    <td class="p-4 text-gray-300 font-medium">${p.guild}</td>
-                    <td class="p-4 text-xs font-mono font-bold text-gray-500">${allianceTag}</td>
-                    <td class="p-4 text-center font-black text-emerald-400 font-mono text-sm">${p.kills}</td>
-                    <td class="p-4 text-center font-black text-red-400 font-mono text-sm">${p.deaths}</td>
-                    <td class="p-4 text-right font-black text-amber-400 font-mono">${formatCompactFame(p.fame)}</td>
+                    <td class="p-4 text-gray-400 font-medium">${p.guild}</td>
+                    <td class="p-4"><span class="${p.alliance === 'NONE' ? 'text-gray-600' : 'bg-gray-900 border border-gray-800 text-amber-500 px-1.5 py-0.5 rounded text-[11px] font-bold'}">${p.alliance}</span></td>
+                    <td class="p-4 text-center font-bold text-emerald-400 font-mono">${p.kills}</td>
+                    <td class="p-4 text-center text-red-400 font-mono">${p.deaths}</td>
+                    <td class="p-4 text-right text-amber-400 font-mono font-black">${p.fame.toLocaleString()}</td>
                 `;
-                playerTbody.appendChild(row);
+                playerTbody.appendChild(tr);
+            });
+        }
+
+        function renderKillStreamTable() {
+            const killTbody = document.getElementById('kill-stream-rows');
+            killTbody.innerHTML = '';
+
+            // Filter kills dynamically based on global sidebar context selection rules
+            let filteredKills = globalKillsArray.filter(k => {
+                const kGuild = k.Killer?.GuildName || "Unknown Guild";
+                const kAlli = (k.Killer?.AllianceName || "NONE").toUpperCase();
+                const vGuild = k.Victim?.GuildName || "Unknown Guild";
+                const vAlli = (k.Victim?.AllianceName || "NONE").toUpperCase();
+
+                if (selectedGuilds.size > 0 && !selectedGuilds.has(kGuild) && !selectedGuilds.has(vGuild)) return false;
+                if (selectedAlliances.size > 0 && !selectedAlliances.has(kAlli) && !selectedAlliances.has(vAlli)) return false;
+                return true;
             });
 
-            document.getElementById('player-page-info').innerText = `Page ${currentPageTracker.player} of ${totalPages}`;
-            document.getElementById('btn-player-prev').disabled = (currentPageTracker.player === 1);
-            document.getElementById('btn-player-next').disabled = (currentPageTracker.player === totalPages);
+            const totalItems = filteredKills.length;
+            const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+
+            if (currentPageTracker.kill > totalPages) currentPageTracker.kill = totalPages;
+            if (currentPageTracker.kill < 1) currentPageTracker.kill = 1;
+
+            const startIdx = (currentPageTracker.kill - 1) * ITEMS_PER_PAGE;
+            const paginatedKills = filteredKills.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+
+            document.getElementById('kill-page-info').innerText = `Showing ${startIdx + 1}-${Math.min(startIdx + ITEMS_PER_PAGE, totalItems)} of ${totalItems} Kill Incidents`;
+            document.getElementById('btn-kill-prev').disabled = currentPageTracker.kill === 1;
+            document.getElementById('btn-kill-next').disabled = currentPageTracker.kill === totalPages;
+
+            if (paginatedKills.length === 0) {
+                killTbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500 italic">No chronological logs match current criteria parameters.</td></tr>`;
+                return;
+            }
+
+            paginatedKills.forEach(k => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-900/10 transition-colors border-b border-gray-900/50";
+
+                const killerName = k.Killer?.Name || "Environment/NPC";
+                const killerGuild = k.Killer?.GuildName ? `${k.Killer.GuildName}` : "No Guild";
+                const victimName = k.Victim?.Name || "Unknown Target";
+                const victimGuild = k.Victim?.GuildName ? `${k.Victim.GuildName}` : "No Guild";
+
+                const killerIp = k.Killer?.AverageItemPower ? Math.round(k.Killer.AverageItemPower) : "-";
+                const victimIp = k.Victim?.AverageItemPower ? Math.round(k.Victim.AverageItemPower) : "-";
+                const fameValue = k.DamageDone || 0; 
+
+                tr.innerHTML = `
+                    <td class="p-4">
+                        <div class="font-bold text-gray-200">${killerName}</div>
+                        <div class="text-[10px] text-gray-500 truncate max-w-[200px]">${killerGuild}</div>
+                    </td>
+                    <td class="p-4 text-center font-mono text-gray-400 font-medium">${killerIp}</td>
+                    <td class="p-4">
+                        <div class="font-bold text-red-300">${victimName}</div>
+                        <div class="text-[10px] text-gray-500 truncate max-w-[200px]">${victimGuild}</div>
+                    </td>
+                    <td class="p-4 text-center font-mono text-gray-400 font-medium">${victimIp}</td>
+                    <td class="p-4 text-right text-amber-500 font-mono font-bold">${fameValue.toLocaleString()}</td>
+                `;
+                killTbody.appendChild(tr);
+            });
         }
 
-        function changePage(tableType, directionalStep) {
-            currentPageTracker[tableType] += directionalStep;
-            
-            if (tableType === 'alliance') renderAllianceTable();
-            else if (tableType === 'guild') renderGuildTable();
-            else if (tableType === 'player') renderPlayerTable();
-        }
-
-        function renderErrorState(customErrorMessage) {
-            document.getElementById('error-message-text').innerText = customErrorMessage;
-            document.getElementById('detail-loading').classList.add('hidden');
-            document.getElementById('detail-content').classList.add('hidden');
-            document.getElementById('error-panel').classList.remove('hidden');
-        }
-
-        processMultiBattleAggregation();
+        // Initialize script trigger loop on document parsing lifecycle completion
+        document.addEventListener('DOMContentLoaded', processMultiBattleAggregation);
     </script>
 </body>
 </html>
