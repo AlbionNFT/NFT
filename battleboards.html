@@ -28,6 +28,15 @@
             z-index: -1;
             filter: blur(40px);
         }
+        /* Removes standard browser spinners/arrows on number inputs */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col font-sans selection:bg-amber-500 selection:text-black pb-24">
@@ -92,13 +101,14 @@
                     <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                         <div class="flex items-center space-x-2 bg-gray-950/60 border border-gray-800 px-3 py-1.5 rounded-lg text-xs">
                             <span class="text-gray-400 font-medium"><i class="fas fa-filter mr-1 text-amber-500/80"></i> Min Players:</span>
-                            <select id="filter-min-players" onchange="handleFilterChange()" class="bg-transparent text-amber-400 font-bold focus:outline-none cursor-pointer pr-2">
-                                <option value="0" class="bg-gray-950 text-gray-300">All Battles</option>
-                                <option value="5" class="bg-gray-950 text-gray-300">5+ Players</option>
-                                <option value="10" class="bg-gray-950 text-gray-300">10+ Players</option>
-                                <option value="15" class="bg-gray-950 text-gray-300">15+ Players</option>
-                                <option value="20" class="bg-gray-950 text-gray-300">20+ Players</option>
-                            </select>
+                            <input 
+                                type="number" 
+                                id="filter-min-players" 
+                                oninput="handleFilterChange()" 
+                                min="0" 
+                                placeholder="e.g. 10" 
+                                class="bg-transparent text-amber-400 font-bold focus:outline-none w-16 border-b border-transparent focus:border-amber-500/50 transition-all placeholder:text-gray-600 placeholder:font-normal"
+                            >
                         </div>
                         <span class="bg-amber-500/10 text-amber-400 text-xs px-3 py-1.5 rounded-lg font-semibold border border-amber-500/20 whitespace-nowrap">
                             Target Guild : NoFreeThinkers
@@ -189,7 +199,7 @@
         const localJsonUrl = `battle-data.json?t=${Date.now()}`;
 
         let allBattlesCache = [];
-        let filteredBattles = []; // Cache to hold processed filters
+        let filteredBattles = []; 
         let currentPage = 1;
         const rowsPerPage = 15;
 
@@ -218,11 +228,12 @@
             } catch(e) { return "Recent Match"; }
         }
 
-        // Apply filters based on minimum player selection
         function applyFilters() {
-            const minPlayers = parseInt(document.getElementById('filter-min-players').value, 10);
+            const inputValue = document.getElementById('filter-min-players').value;
+            // Default to 0 if input container is completely cleared out
+            const minPlayers = inputValue === "" ? 0 : parseInt(inputValue, 10);
             
-            if (minPlayers === 0) {
+            if (minPlayers <= 0 || isNaN(minPlayers)) {
                 filteredBattles = [...allBattlesCache];
             } else {
                 filteredBattles = allBattlesCache.filter(battle => {
@@ -240,7 +251,7 @@
         }
 
         function handleFilterChange() {
-            currentPage = 1; // Reset to page 1 on filter modification
+            currentPage = 1; 
             applyFilters();
             displayCurrentPage();
         }
@@ -250,7 +261,7 @@
             tbody.innerHTML = "";
 
             if (filteredBattles.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-xs text-gray-500 italic">No historical operational logs uncovered within this filtered timeframe.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-xs text-gray-500 italic">No operational logs match this setup criteria.</td></tr>`;
                 updatePaginationControls();
                 return;
             }
@@ -372,7 +383,6 @@
                 
                 allBattlesCache = parsedData;
                 
-                // Initialize the filter engine with raw server data
                 applyFilters();
                 
                 document.getElementById('log-loading').classList.add('hidden');
@@ -387,6 +397,6 @@
         }
 
         initFetchWorkflow();
-    </script>   
+    </script>
 </body>
 </html>
