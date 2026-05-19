@@ -90,12 +90,10 @@
                         <p class="text-xs text-gray-500 mt-0.5">Most recent tracked guild operations across zones.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                        
                         <div class="flex items-center space-x-2 bg-gray-950/60 border border-gray-800 px-3 py-1.5 rounded-lg text-xs w-full sm:w-auto">
                             <span class="text-gray-400 font-medium"><i class="fas fa-users mr-1 text-amber-500/80"></i> Min Event Players:</span>
                             <input id="filter-total-players" type="number" min="0" placeholder="Type a number..." onkeydown="if(event.key==='.'){event.preventDefault();}" oninput="this.value=this.value.replace(/[^0-9]/g,''); handleLiveFilterChange();" class="bg-transparent text-amber-400 font-bold focus:outline-none placeholder-gray-600 w-28 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                         </div>
-                        
                     </div>
                 </div>
                 
@@ -153,7 +151,7 @@
                     <p class="text-[11px] text-gray-400">Ready to execute cross-match analytical evaluation.</p>
                 </div>
             </div>
-            <button onclick="navigateToMultiBoards()" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-gray-950 font-black text-xs tracking-wider px-4 py-2.5 rounded-lg shadow-lg shadow-amber-500/10 transition-all cursor-pointer uppercase" style="margin-left: 1px;">
+            <button onclick="navigateToMultiBoards()" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-gray-950 font-black text-xs tracking-wider px-4 py-2.5 rounded-lg shadow-lg shadow-amber-500/10 transition-all cursor-pointer uppercase">
                 See Multiple Battleboards <i class="fas fa-arrow-right ml-1"></i>
             </button>
         </div>
@@ -176,16 +174,12 @@
 
     <script>
     const TARGET_GUILD_ID = "AIbIw4erSVyHg9Ab6LVtdA";
-    
-    const githubUser = 'AlbionNFT';
-    const repoName = 'NFT'; 
     const localJsonUrl = `battle-data.json?t=${Date.now()}`;
 
     let allBattlesCache = [];
     let filteredBattles = []; 
     let currentPage = 1;
     const rowsPerPage = 15;
-
     let selectedBattleIds = new Set();
 
     function formatCompactFame(num) {
@@ -201,72 +195,8 @@
         try {
             const d = new Date(isoString);
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const month = months[d.getUTCMonth()]; 
-            const day = d.getUTCDate();
-            
-            const hours = String(d.getUTCHours()).padStart(2, '0');
-            const minutes = String(d.getUTCMinutes()).padStart(2, '0');
-            
-            return `${month} ${day}, ${hours}:${minutes} UTC`;
+            return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
         } catch(e) { return "Recent Match"; }
-    }
-
-    function groupEventsIntoBattles(events) {
-        if (!Array.isArray(events)) return [];
-
-        return events.map(event => {
-            const battleId = event.EventId;
-            const startTime = event.TimeStamp;
-            const players = {};
-
-            if (event.Killer) {
-                players[event.Killer.Id] = {
-                    guildId: event.Killer.GuildId,
-                    guildName: event.Killer.GuildName,
-                    kills: event.Killer.GuildId === TARGET_GUILD_ID ? 1 : 0,
-                    deaths: 0,
-                    killFame: event.TotalVictimKillFame || 0 
-                };
-            }
-
-            if (event.Victim) {
-                if (players[event.Victim.Id]) {
-                    players[event.Victim.Id].deaths = event.Victim.GuildId === TARGET_GUILD_ID ? 1 : 0;
-                } else {
-                    players[event.Victim.Id] = {
-                        guildId: event.Victim.GuildId,
-                        guildName: event.Victim.GuildName,
-                        kills: 0,
-                        deaths: event.Victim.GuildId === TARGET_GUILD_ID ? 1 : 0,
-                        killFame: 0
-                    };
-                }
-            }
-
-            if (Array.isArray(event.Participants)) {
-                event.Participants.forEach(p => {
-                    if (players[p.Id]) {
-                        if (p.GuildId === TARGET_GUILD_ID && event.Killer?.Id === p.Id) {
-                            players[p.Id].kills = 1;
-                        }
-                    } else {
-                        players[p.Id] = {
-                            guildId: p.GuildId,
-                            guildName: p.GuildName,
-                            kills: (p.GuildId === TARGET_GUILD_ID && event.Killer?.Id === p.Id) ? 1 : 0,
-                            deaths: 0,
-                            killFame: 0
-                        };
-                    }
-                });
-            }
-
-            return {
-                id: battleId,
-                startTime: startTime,
-                players: players
-            };
-        });
     }
 
     function applyFilters() {
@@ -277,16 +207,14 @@
             filteredBattles = [...allBattlesCache];
         } else {
             filteredBattles = allBattlesCache.filter(battle => {
-                let totalEventPlayerCount = 0;
-                if (battle.players) {
-                    totalEventPlayerCount = Object.keys(battle.players).length;
-                }
+                // Safeguard against missing data structures
+                if (!battle.players) return false;
+                const totalEventPlayerCount = Object.keys(battle.players).length;
                 return totalEventPlayerCount >= minTotalPlayers;
             });
         }
     }
 
-    // Triggers instantly on keystroke changes instead of requiring a explicit action button event
     function handleLiveFilterChange() {
         currentPage = 1; 
         applyFilters();
@@ -314,7 +242,15 @@
             let computedDeaths = 0;
             let computedFame = 0;
 
-            if (battle.players) {
+            // Extract metrics cleanly directly from the new mapped guild entries object
+            if (battle.guilds && battle.guilds[TARGET_GUILD_ID]) {
+                const gData = battle.guilds[TARGET_GUILD_ID];
+                targetGuildName = gData.name || targetGuildName;
+                computedKills = gData.kills || 0;
+                computedDeaths = gData.deaths || 0;
+                computedFame = gData.killFame || 0;
+            } else if (battle.players) {
+                // Fallback compilation method from player list map if guild array summary blocks are missing
                 Object.values(battle.players).forEach(player => {
                     if (player.guildId === TARGET_GUILD_ID) {
                         if (player.guildName) targetGuildName = player.guildName;
@@ -331,7 +267,7 @@
             row.className = "hover:bg-gray-900/30 transition-colors border-b border-gray-900/60 text-gray-300";
             row.innerHTML = `
                 <td class="p-4 text-center">
-                    <input type="checkbox" data-id="${battle.id}" ${isChecked} onchange="toggleBattleSelection(this, ${battle.id})" class="w-4 h-4 rounded border-gray-800 bg-gray-950 text-amber-500 accent-amber-500 focus:ring-0 cursor-pointer">
+                    <input type="checkbox" data-id="${battle.id}" ${isChecked} onchange="toggleBattleSelection(this, '${battle.id}')" class="w-4 h-4 rounded border-gray-800 bg-gray-950 text-amber-500 accent-amber-500 focus:ring-0 cursor-pointer">
                 </td>
                 <td class="p-4 font-medium text-gray-200">
                     <span class="block text-white font-bold">#${battle.id}</span>
@@ -420,13 +356,11 @@
             if (!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
             let rawData = await res.json();
             
-            let parsedData = groupEventsIntoBattles(rawData);
+            // Accept the data array directly, ensuring it is formatted right
+            let parsedData = Array.isArray(rawData) ? rawData : [];
             
-            if (Array.isArray(parsedData)) {
-                parsedData.sort((a, b) => {
-                    return new Date(b.startTime || 0) - new Date(a.startTime || 0);
-                });
-            }
+            // Sort battles reverse chronologically by default
+            parsedData.sort((a, b) => new Date(b.startTime || 0) - new Date(a.startTime || 0));
             
             allBattlesCache = parsedData;
             applyFilters();
