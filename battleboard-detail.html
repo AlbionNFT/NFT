@@ -371,7 +371,6 @@
 
             try {
                 // 2. Extract Data Source Stack
-                // Replace 'battles.json' with your endpoint if pulling from an actual real-time server database
                 const response = await fetch('battle-data.json');
                 if (!response.ok) throw new Error("Could not download backend tactical database stack storage array.");
                 
@@ -383,6 +382,15 @@
                 if (!currentBattle) {
                     showError(`Battle record #${battleId} could not be successfully indexed or found within database storage records.`);
                     return;
+                }
+
+                // ==========================================
+                // FIX: Convert backend Object map to Array
+                // ==========================================
+                if (currentBattle.players && !Array.isArray(currentBattle.players)) {
+                    currentBattle.players = Object.values(currentBattle.players);
+                } else if (!currentBattle.players) {
+                    currentBattle.players = [];
                 }
 
                 // 3. Process metrics layout structure
@@ -419,9 +427,10 @@
             const guildMap = {};
 
             // Accumulate metrics directly from player payload structures
-            Object.values(currentBattle.players || {}).forEach(p => {
-                const alliance = p.alliance || 'NONE';
-                const guild = p.guild || 'Independent';
+            // Uses currentBattle.players cleanly now that it is forced to an array
+            currentBattle.players.forEach(p => {
+                const alliance = p.allianceName || p.alliance || 'NONE';
+                const guild = p.guildName || p.guild || 'Independent';
 
                 // Alliance Calculations
                 if (!allianceMap[alliance]) {
@@ -430,7 +439,7 @@
                 allianceMap[alliance].players++;
                 allianceMap[alliance].kills += (p.kills || 0);
                 allianceMap[alliance].deaths += (p.deaths || 0);
-                allianceMap[alliance].fame += (p.fame || 0);
+                allianceMap[alliance].fame += (p.killFame || p.fame || 0);
 
                 // Guild Calculations
                 if (!guildMap[guild]) {
@@ -439,7 +448,7 @@
                 guildMap[guild].players++;
                 guildMap[guild].kills += (p.kills || 0);
                 guildMap[guild].deaths += (p.deaths || 0);
-                guildMap[guild].fame += (p.fame || 0);
+                guildMap[guild].fame += (p.killFame || p.fame || 0);
             });
 
             computedAlliances = Object.values(allianceMap).sort((a, b) => b.fame - a.fame);
@@ -540,20 +549,25 @@
 
         // Filtering and sorting core computations
         function filterAndSortPlayers() {
-            let filtered = (currentBattle.players || []).slice();
+            // FIX: Works seamlessly now that currentBattle.players is an array
+            let filtered = currentBattle.players.slice();
 
             // Apply Checkbox Vector filters
             if (selectedGuilds.size > 0) {
-                filtered = filtered.filter(p => selectedGuilds.has(p.guild || 'Independent'));
+                filtered = filtered.filter(p => selectedGuilds.has(p.guildName || p.guild || 'Independent'));
             }
             if (selectedAlliances.size > 0) {
-                filtered = filtered.filter(p => selectedAlliances.has(p.alliance || 'NONE'));
+                filtered = filtered.filter(p => selectedAlliances.has(p.allianceName || p.alliance || 'NONE'));
             }
 
             // Apply Field Level Ordering
             filtered.sort((a, b) => {
-                let valA = a[currentSortField] || 0;
-                let valB = b[currentSortField] || 0;
+                // Map database JSON keys ('killFame') to script sort fields ('fame')
+                let fieldA = currentSortField === 'fame' ? (a.killFame || a.fame) : a[currentSortField];
+                let fieldB = currentSortField === 'fame' ? (b.killFame || b.fame) : b[currentSortField];
+
+                let valA = fieldA || 0;
+                let valB = fieldB || 0;
 
                 if (currentSortOrder === 'asc') {
                     return valA > valB ? 1 : -1;
@@ -563,7 +577,7 @@
             });
 
             sortedPlayers = filtered;
-            playerPage = 1; // Reset window view back to first frame matrix block
+            playerPage = 1; 
             renderPlayerTable();
         }
 
@@ -575,7 +589,8 @@
             const end = Math.min(start + playerLimit, sortedPlayers.length);
             const slice = sortedPlayers.slice(start, end);
 
-            document.getElementById('player-count-badge').textContent = `${sortedPlayers.length} / ${(currentBattle.players || []).length} Combatants Rendered`;
+            // FIX: Safely reads length now
+            document.getElementById('player-count-badge').textContent = `${sortedPlayers.length} / ${currentBattle.players.length} Combatants Rendered`;
 
             if(slice.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500">No active combatant vectors matched the current filter conditions.</td></tr>`;
@@ -585,11 +600,11 @@
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-900/10 border-b border-gray-900/30 text-xs sm:text-sm transition-colors">
                         <td class="p-4 font-bold text-white tracking-wide">${p.name}</td>
-                        <td class="p-4 text-gray-400 font-medium">${p.guild || '—'}</td>
-                        <td class="p-4 font-mono text-gray-500 text-xs">${p.alliance ? `[${p.alliance}]` : '—'}</td>
+                        <td class="p-4 text-gray-400 font-medium">${p.guildName || p.guild || '—'}</td>
+                        <td class="p-4 font-mono text-gray-500 text-xs">${(p.allianceName || p.alliance) ? `[${p.allianceName || p.alliance}]` : '—'}</td>
                         <td class="p-4 text-center text-emerald-400 font-semibold">${p.kills || 0}</td>
                         <td class="p-4 text-center text-red-400 font-semibold">${p.deaths || 0}</td>
-                        <td class="p-4 text-right font-mono text-amber-400 font-medium">${(p.fame || 0).toLocaleString()}</td>
+                        <td class="p-4 text-right font-mono text-amber-400 font-medium">${(p.killFame || p.fame || 0).toLocaleString()}</td>
                     </tr>
                 `;
             });
@@ -622,7 +637,6 @@
             }
         }
 
-        // Render Combat Streams Timeline Log Card
         function renderCombatLogs() {
             const tbody = document.getElementById('combat-log-rows');
             tbody.innerHTML = '';
@@ -661,18 +675,15 @@
             document.getElementById('btn-log-prev').disabled = logPage === 1;
             document.getElementById('btn-log-next').disabled = end >= logs.length;
             
-            // Build out clean mini log pagination indicators
             const numContainer = document.getElementById('log-pagination-numbers');
             numContainer.innerHTML = `<span class="text-gray-500">Page <span class="text-gray-300 font-bold">${logPage}</span> of ${Math.ceil(logs.length / logLimit) || 1}</span>`;
         }
 
-        // Interactive Filtering / UI Mechanics Actions
         function toggleDropdown(id, event) {
             event.stopPropagation();
             const el = document.getElementById(id);
             const targetState = el.classList.contains('hidden');
             
-            // Dismiss active view drop frames across matrix fields
             document.getElementById('guild-dropdown').classList.add('hidden');
             document.getElementById('alliance-dropdown').classList.add('hidden');
 
@@ -709,7 +720,6 @@
                 currentSortOrder = 'desc'; 
             }
 
-            // Sync structural arrow elements across fontawesome frameworks
             ['kills', 'deaths', 'fame'].forEach(f => {
                 const icon = document.getElementById(`sort-icon-${f}`);
                 if (f === currentSortField) {
@@ -722,7 +732,6 @@
             filterAndSortPlayers();
         }
 
-        // Global Event Window Intercepts for Dynamic Dropdowns Escape Hooks
         function setupDropdownDismissals() {
             window.addEventListener('click', () => {
                 document.getElementById('guild-dropdown').classList.add('hidden');
@@ -732,7 +741,6 @@
             document.getElementById('alliance-dropdown').addEventListener('click', e => e.stopPropagation());
         }
 
-        // Layout Navigation Actions Configuration Matrix
         function changeAlliancePage(dir) { alliancePage += dir; renderAllianceTable(); }
         function changeGuildPage(dir) { guildPage += dir; renderGuildTable(); }
         function changePage(dir) { playerPage += dir; renderPlayerTable(); }
@@ -745,6 +753,6 @@
             document.getElementById('error-message-text').textContent = msg;
             document.getElementById('error-panel').classList.remove('hidden');
         }
-    </script>
+</script>
 </body>
 </html>
