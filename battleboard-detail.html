@@ -372,7 +372,7 @@
             try {
                 // 2. Extract Data Source Stack
                 // Replace 'battles.json' with your endpoint if pulling from an actual real-time server database
-                const response = await fetch('battles.json');
+                const response = await fetch('battle-data.json');
                 if (!response.ok) throw new Error("Could not download backend tactical database stack storage array.");
                 
                 const data = await response.json();
