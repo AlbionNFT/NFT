@@ -419,7 +419,7 @@
             const guildMap = {};
 
             // Accumulate metrics directly from player payload structures
-            (currentBattle.players || []).forEach(p => {
+            Object.values(currentBattle.players || {}).forEach(p => {
                 const alliance = p.alliance || 'NONE';
                 const guild = p.guild || 'Independent';
 
