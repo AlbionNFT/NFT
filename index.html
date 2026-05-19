@@ -75,18 +75,17 @@
                         <a href="#" class="text-amber-400 border-b-2 border-amber-400 pb-1">Home</a>
                         <a href="#stats" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Guild Stats</a>
                         <a href="members.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Members</a>
-                        <a href="build.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Builds</a>
                         <a href="battleboards.html" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Battle Boards</a>
                         <a href="#community" class="text-gray-300 hover:text-amber-400 transition-colors duration-200">Community</a>
                     </nav>
 
-                    <div class="flex items-center">
-                        <a href="https://discord.gg/yEegm7mdRT" target="_blank" class="relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-xs font-bold text-gray-900 rounded-lg group bg-gradient-to-br from-amber-500 to-orange-600 group-hover:from-amber-500 group-hover:to-orange-600 hover:text-white text-white focus:ring-4 focus:outline-none focus:ring-amber-800 mt-2">
+                    <div class="flex items-center" id="auth-btn-wrapper">
+                        <a id="auth-nav-btn" href="/functions/auth" class="relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-xs font-bold text-gray-900 rounded-lg group bg-gradient-to-br from-amber-500 to-orange-600 group-hover:from-amber-500 group-hover:to-orange-600 hover:text-white text-white focus:ring-4 focus:outline-none focus:ring-amber-800 mt-2">
                             <span class="relative px-4 py-2 transition-all ease-in duration-75 bg-gray-950 rounded-md group-hover:bg-opacity-0">
-                                <i class="fab fa-discord mr-1 text-amber-400 group-hover:text-white"></i> JOIN DISCORD
+                                <i class="fab fa-discord mr-1 text-amber-400 group-hover:text-white"></i> DISCORD LOGIN
                             </span>
                         </a>
-                    </div>  
+                    </div>
                 </div>
             </header>
 
@@ -263,6 +262,50 @@
         </footer>
 
         <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const authBtn = document.getElementById("auth-nav-btn");
+            const navContainer = document.querySelector("nav"); // Selects your desktop navigation links
+
+            try {
+                // 1. Ask our backend if a valid session exists and get user info
+                const response = await fetch("/functions/check-session");
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    
+                    // 2. Dynamically insert the hidden pages to the navigation bar
+                    if (navContainer) {
+                        // Create the Builds Link
+                        const buildsLink = document.createElement("a");
+                        buildsLink.href = "build.html";
+                        buildsLink.className = "text-gray-300 hover:text-amber-400 transition-colors duration-200 font-medium";
+                        buildsLink.textContent = "Builds";
+
+                        // Create the Regear Link
+                        const regearLink = document.createElement("a");
+                        regearLink.href = "regear.html";
+                        regearLink.className = "text-gray-300 hover:text-amber-400 transition-colors duration-200 font-medium";
+                        regearLink.textContent = "Regear";
+                        
+                        // Append both right into your nav group
+                        navContainer.appendChild(buildsLink);
+                        navContainer.appendChild(regearLink);
+                    }
+
+                    // 3. Transform the Login Button into their Discord Profile Button
+                    if (authBtn) {
+                        authBtn.href = "#"; 
+                        authBtn.innerHTML = `
+                            <span class="relative px-4 py-2 transition-all ease-in duration-75 bg-gray-950 rounded-md group-hover:bg-opacity-0 text-emerald-400 flex items-center gap-2">
+                                <i class="fab fa-discord"></i> LOGGED IN AS ${userData.username.toUpperCase()}
+                            </span>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+            }
+        });
             const githubUser = 'AlbionNFT';
             const repoName = 'NFT'; 
             const localJsonUrl = `/guild-data.json?t=${Date.now()}`;
