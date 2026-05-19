@@ -303,83 +303,84 @@
     </footer>
 
 <script>
-        // State variables
-        let combinedBattles = []; // Holds references to all matched battle objects
-        let aggregatedPlayers = []; // Final global unique players array
+        // State arrays
+        let combinedBattles = []; 
+        let aggregatedPlayers = []; 
         let sortedPlayers = [];
         let computedAlliances = [];
         let computedGuilds = [];
+        let globalCombatLogs = [];
 
-        // Pagination States
+        // Pagination Limits & Tracking Vectors
         let playerPage = 1;
         const playerLimit = 10;
-        let logPage = 1;
-        const logLimit = 10;
+        let killPage = 1;
+        const killLimit = 10;
         let alliancePage = 1;
         const allianceLimit = 5;
         let guildPage = 1;
         const guildLimit = 5;
 
-        // Sorting & Filtering parameters
+        // Sorting configuration metrics
         let currentSortField = 'fame'; 
         let currentSortOrder = 'desc'; 
         let selectedGuilds = new Set();
         let selectedAlliances = new Set();
 
-        // Initialize Engine on Window Load
+        // Execution Core
         window.addEventListener('DOMContentLoaded', async () => {
             setupDropdownDismissals();
             
-            // 1. Parse URL Parameters looking for multiple IDs (e.g., ?ids=101112,101113)
+            // Extract IDs from parameters loop string (e.g. ?ids=101,102)
             const urlParams = new URLSearchParams(window.location.search);
-            const idsParam = urlParams.get('ids') || urlParams.get('id'); // Fallbacks safely to either string format
+            const idsParam = urlParams.get('ids') || urlParams.get('id');
 
             if (!idsParam) {
-                showError("No specific Battle Board IDs were provided in the routing parameters. (Expected: ?ids=123,456)");
+                showError("No valid Battle Board string arrays identified within URL tracking query parameters (?ids=X,Y).");
                 return;
             }
 
-            // Split comma-separated IDs into a clean string array
             const targetBattleIds = idsParam.split(',').map(id => String(id.trim()));
 
             try {
-                // 2. Extract Data Source Stack
                 const response = await fetch('battle-data.json');
-                if (!response.ok) throw new Error("Could not download backend tactical database stack storage array.");
+                if (!response.ok) throw new Error("Could not extract database history log manifest from structural endpoint.");
                 
                 const data = await response.json();
                 
-                // Filter down database array to all records matching our requested IDs list
+                // Match items inside repository
                 combinedBattles = data.filter(b => targetBattleIds.includes(String(b.id)));
 
                 if (combinedBattles.length === 0) {
-                    showError(`None of the requested Battle records (#${idsParam}) could be found within database storage records.`);
+                    showError(`The requested battle datasets (#${idsParam}) were missing from the local registry database.`);
                     return;
                 }
 
-                // 3. Aggregate all battle structures together into one data matrix
+                // Execute data pipeline aggregation steps
                 aggregateBattleDataStack();
-
-                // 4. Run metrics layout builders
-                initializeBattleView();
+                initializeBattleView(targetBattleIds);
 
             } catch (err) {
                 console.error(err);
-                showError("Fatal Engine Failure: " + err.message);
+                showError("Fatal Core Processor Exception: " + err.message);
             }
         });
 
         function aggregateBattleDataStack() {
             const uniquePlayersMap = {};
+            globalCombatLogs = [];
 
             combinedBattles.forEach(battle => {
-                // Determine if players property is structured as a dictionary object or array
+                // Compile general timeline tracking logs together
+                if (battle.logs && Array.isArray(battle.logs)) {
+                    globalCombatLogs = globalCombatLogs.concat(battle.logs);
+                }
+
                 const playerEntries = Array.isArray(battle.players) 
                     ? battle.players 
                     : Object.values(battle.players || {});
 
                 playerEntries.forEach(p => {
-                    // Unique Key fallback setup to safely target unique players across timelines
                     const playerKey = p.name; 
                     if (!playerKey) return;
 
@@ -388,7 +389,7 @@
                     const pFame = p.killFame || p.fame || 0;
 
                     if (!uniquePlayersMap[playerKey]) {
-                        // First time seeing this player across any battle: initialize record entry
+                        // Insert standard unique index marker map frame
                         uniquePlayersMap[playerKey] = {
                             name: p.name,
                             guild: pGuild,
@@ -398,39 +399,45 @@
                             fame: pFame
                         };
                     } else {
-                        // Duplicate player found! Accumulate metrics but keep entity distinct (Counted as 1 player)
+                        // De-duplication rule active: combine calculations, unique user count remains 1
                         uniquePlayersMap[playerKey].kills += (p.kills || 0);
                         uniquePlayersMap[playerKey].deaths += (p.deaths || 0);
                         uniquePlayersMap[playerKey].fame += pFame;
                         
-                        // Fallback edge case: Update guild details if they swapped teams between battles
+                        // Update affiliation indices dynamically if changes occurred between events
                         if (pGuild !== 'Independent') uniquePlayersMap[playerKey].guild = pGuild;
                         if (pAlliance !== 'NONE') uniquePlayersMap[playerKey].alliance = pAlliance;
                     }
                 });
             });
 
-            // Flatten our unique aggregated tracking map back into an operational loop array
             aggregatedPlayers = Object.values(uniquePlayersMap);
         }
 
-        function initializeBattleView() {
-            // Update Headers with Aggregation information
-            const totalAggregatedBoards = combinedBattles.map(b => `#${b.id}`).join(', ');
-            document.getElementById('header-battle-id').textContent = `Aggregated: ${totalAggregatedBoards}`;
-            document.getElementById('header-battle-time').textContent = `COMBINED OPERATION METRICS FROM ${combinedBattles.length} BOARDS`;
+        function initializeBattleView(targetBattleIds) {
+            // Synchronize with structural layout indicators
+            const statusText = document.getElementById('combined-status-text');
+            if (statusText) statusText.textContent = `Successfully merged ${combinedBattles.length} operations. Displaying total metrics data logs.`;
 
-            // Compile summaries dynamically based on aggregated unique datasets
+            // Setup Badge Arrays
+            const badgeContainer = document.getElementById('battle-ids-badges');
+            if (badgeContainer) {
+                badgeContainer.innerHTML = targetBattleIds.map(id => `
+                    <span class="bg-gray-950 border border-gray-800 text-amber-400 font-mono text-xs px-2.5 py-1 rounded-md shadow-inner flex items-center gap-1.5 font-bold">
+                        <span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span> Board #${id}
+                    </span>
+                `).join('');
+            }
+
+            // Calculate summaries, distributions and options panels
             compileTeamSummaries();
-
-            // Setup Checkbox filter lists
             populateFilterOptions();
 
-            // Run layout sort algorithms
+            // Run structural data layout updates
             filterAndSortPlayers();
-            renderCombatLogs();
+            renderKillStreamTable();
 
-            // Reveal UI elements
+            // Reveal hidden structural DOM containers
             document.getElementById('detail-loading').classList.add('hidden');
             document.getElementById('detail-content').classList.remove('hidden');
         }
@@ -439,21 +446,19 @@
             const allianceMap = {};
             const guildMap = {};
 
-            // Accumulate metrics from the already-flattened, distinct global players list
+            // Build metrics loops solely out of de-duplicated player totals mapping framework
             aggregatedPlayers.forEach(p => {
                 const alliance = p.alliance;
                 const guild = p.guild;
 
-                // Alliance Calculations
                 if (!allianceMap[alliance]) {
                     allianceMap[alliance] = { tag: alliance, players: 0, kills: 0, deaths: 0, fame: 0 };
                 }
-                allianceMap[alliance].players++; // Duplicate players are naturally accounted for as 1 count here
+                allianceMap[alliance].players++; // Accounts for player exactly once globally
                 allianceMap[alliance].kills += p.kills;
                 allianceMap[alliance].deaths += p.deaths;
                 allianceMap[alliance].fame += p.fame;
 
-                // Guild Calculations
                 if (!guildMap[guild]) {
                     guildMap[guild] = { name: guild, alliance: alliance, players: 0, kills: 0, deaths: 0, fame: 0 };
                 }
@@ -470,17 +475,18 @@
             renderGuildTable();
         }
 
-        // Table Render Modules
         function renderAllianceTable() {
             const tbody = document.getElementById('alliance-rows');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
             const start = (alliancePage - 1) * allianceLimit;
             const end = Math.min(start + allianceLimit, computedAlliances.length);
             const slice = computedAlliances.slice(start, end);
+            const totalPages = Math.ceil(computedAlliances.length / allianceLimit) || 1;
 
             if(slice.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-600">No alliance metadata found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-600">No matching alliance parameters compiled.</td></tr>`;
             }
 
             slice.forEach(a => {
@@ -495,23 +501,23 @@
                 `;
             });
 
-            document.getElementById('alliance-start').textContent = computedAlliances.length ? start + 1 : 0;
-            document.getElementById('alliance-end').textContent = end;
-            document.getElementById('alliance-total').textContent = computedAlliances.length;
+            document.getElementById('alliance-page-info').textContent = `Page ${alliancePage} of ${totalPages}`;
             document.getElementById('btn-alliance-prev').disabled = alliancePage === 1;
             document.getElementById('btn-alliance-next').disabled = end >= computedAlliances.length;
         }
 
         function renderGuildTable() {
             const tbody = document.getElementById('guild-rows');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
             const start = (guildPage - 1) * guildLimit;
             const end = Math.min(start + guildLimit, computedGuilds.length);
             const slice = computedGuilds.slice(start, end);
+            const totalPages = Math.ceil(computedGuilds.length / guildLimit) || 1;
 
             if(slice.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-600">No guild metadata found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-600">No operational guild parameters tracked.</td></tr>`;
             }
 
             slice.forEach(g => {
@@ -527,9 +533,7 @@
                 `;
             });
 
-            document.getElementById('guild-start').textContent = computedGuilds.length ? start + 1 : 0;
-            document.getElementById('guild-end').textContent = end;
-            document.getElementById('guild-total').textContent = computedGuilds.length;
+            document.getElementById('guild-page-info').textContent = `Page ${guildPage} of ${totalPages}`;
             document.getElementById('btn-guild-prev').disabled = guildPage === 1;
             document.getElementById('btn-guild-next').disabled = end >= computedGuilds.length;
         }
@@ -537,32 +541,35 @@
         function populateFilterOptions() {
             const guildList = document.getElementById('guild-checkbox-list');
             const allianceList = document.getElementById('alliance-checkbox-list');
-            guildList.innerHTML = '';
-            allianceList.innerHTML = '';
+            if(guildList) guildList.innerHTML = '';
+            if(allianceList) allianceList.innerHTML = '';
 
             computedGuilds.forEach(g => {
-                guildList.innerHTML += `
-                    <label class="flex items-center space-x-2 hover:text-white cursor-pointer py-0.5">
-                        <input type="checkbox" value="${g.name}" onchange="handleFilterChange('guild', this)" class="rounded border-gray-800 text-amber-500 focus:ring-0 focus:ring-offset-0 bg-gray-900 w-3.5 h-3.5">
-                        <span class="truncate">${g.name}</span>
-                    </label>
-                `;
+                if(guildList) {
+                    guildList.innerHTML += `
+                        <label class="flex items-center space-x-2 hover:text-white cursor-pointer py-0.5">
+                            <input type="checkbox" value="${g.name}" onchange="handleFilterChange('guild', this)" class="rounded border-gray-800 text-amber-500 focus:ring-0 bg-gray-900 w-3.5 h-3.5">
+                            <span class="truncate">${g.name}</span>
+                        </label>
+                    `;
+                }
             });
 
             computedAlliances.forEach(a => {
-                allianceList.innerHTML += `
-                    <label class="flex items-center space-x-2 hover:text-white cursor-pointer py-0.5">
-                        <input type="checkbox" value="${a.tag}" onchange="handleFilterChange('alliance', this)" class="rounded border-gray-800 text-amber-500 focus:ring-0 focus:ring-offset-0 bg-gray-900 w-3.5 h-3.5">
-                        <span class="font-mono">[${a.tag}]</span>
-                    </label>
-                `;
+                if(allianceList) {
+                    allianceList.innerHTML += `
+                        <label class="flex items-center space-x-2 hover:text-white cursor-pointer py-0.5">
+                            <input type="checkbox" value="${a.tag}" onchange="handleFilterChange('alliance', this)" class="rounded border-gray-800 text-amber-500 focus:ring-0 bg-gray-900 w-3.5 h-3.5">
+                            <span class="font-mono">[${a.tag}]</span>
+                        </label>
+                    `;
+                }
             });
         }
 
         function filterAndSortPlayers() {
             let filtered = aggregatedPlayers.slice();
 
-            // Apply Checkbox Vector filters
             if (selectedGuilds.size > 0) {
                 filtered = filtered.filter(p => selectedGuilds.has(p.guild));
             }
@@ -570,16 +577,10 @@
                 filtered = filtered.filter(p => selectedAlliances.has(p.alliance));
             }
 
-            // Apply Field Level Ordering
             filtered.sort((a, b) => {
                 let valA = a[currentSortField] || 0;
                 let valB = b[currentSortField] || 0;
-
-                if (currentSortOrder === 'asc') {
-                    return valA > valB ? 1 : -1;
-                } else {
-                    return valA < valB ? 1 : -1;
-                }
+                return currentSortOrder === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
             });
 
             sortedPlayers = filtered;
@@ -589,17 +590,21 @@
 
         function renderPlayerTable() {
             const tbody = document.getElementById('player-rows');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
             const start = (playerPage - 1) * playerLimit;
             const end = Math.min(start + playerLimit, sortedPlayers.length);
             const slice = sortedPlayers.slice(start, end);
+            const totalPages = Math.ceil(sortedPlayers.length / playerLimit) || 1;
 
-            // Updated badge metric representation to denote distinct players globally
-            document.getElementById('player-count-badge').textContent = `${sortedPlayers.length} / ${aggregatedPlayers.length} Unique Combatants Filtered`;
+            const countBadge = document.getElementById('player-count-badge');
+            if (countBadge) {
+                countBadge.textContent = `${sortedPlayers.length} / ${aggregatedPlayers.length} Unique Combatants Manifested`;
+            }
 
             if(slice.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500">No active combatant vectors matched the current filter conditions.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500">No active tracking matrices matched structural criteria filters.</td></tr>`;
             }
 
             slice.forEach(p => {
@@ -615,51 +620,26 @@
                 `;
             });
 
-            document.getElementById('pagination-start').textContent = sortedPlayers.length ? start + 1 : 0;
-            document.getElementById('pagination-end').textContent = end;
-            document.getElementById('pagination-total').textContent = sortedPlayers.length;
-
-            document.getElementById('btn-prev-page').disabled = playerPage === 1;
-            document.getElementById('btn-next-page').disabled = end >= sortedPlayers.length;
-
-            renderPaginationControls(Math.ceil(sortedPlayers.length / playerLimit));
+            document.getElementById('player-page-info').textContent = `Page ${playerPage} of ${totalPages}`;
+            document.getElementById('btn-player-prev').disabled = playerPage === 1;
+            document.getElementById('btn-player-next').disabled = end >= sortedPlayers.length;
         }
 
-        function renderPaginationControls(totalPages) {
-            const container = document.getElementById('pagination-numbers');
-            container.innerHTML = '';
-            
-            if(totalPages <= 1) return;
-
-            for(let i = 1; i <= totalPages; i++) {
-                if(i === playerPage) {
-                    container.innerHTML += `<span class="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold">${i}</span>`;
-                } else if(i === 1 || i === totalPages || Math.abs(i - playerPage) <= 1) {
-                    container.innerHTML += `<button onclick="goToPlayerPage(${i})" class="px-2.5 py-1 rounded bg-gray-900 hover:bg-gray-800 text-gray-400 hover:text-white transition-all">${i}</button>`;
-                } else if(i === 2 || i === totalPages - 1) {
-                    container.innerHTML += `<span class="text-gray-600 px-0.5">...</span>`;
-                }
-            }
-        }
-
-        function renderCombatLogs() {
-            const tbody = document.getElementById('combat-log-rows');
+        function renderKillStreamTable() {
+            const tbody = document.getElementById('kill-stream-rows');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
-            // Combine combat logs from all active matching boards
-            let logs = [];
-            combinedBattles.forEach(b => {
-                if (b.logs && Array.isArray(b.logs)) {
-                    logs = logs.concat(b.logs);
-                }
-            });
+            const start = (killPage - 1) * killLimit;
+            const end = Math.min(start + killLimit, globalCombatLogs.length);
+            const slice = globalCombatLogs.slice(start, end);
+            const totalPages = Math.ceil(globalCombatLogs.length / killLimit) || 1;
 
-            const start = (logPage - 1) * logLimit;
-            const end = Math.min(start + logLimit, logs.length);
-            const slice = logs.slice(start, end);
+            const logBadge = document.getElementById('kill-count-badge');
+            if (logBadge) logBadge.textContent = `${globalCombatLogs.length} Logged Incidents Combined`;
 
             if(slice.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500">No live stream combat logs registered across combined arrays.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500">No global runtime metrics stream frames compiled.</td></tr>`;
             }
 
             slice.forEach(log => {
@@ -680,20 +660,16 @@
                 `;
             });
 
-            document.getElementById('log-pagination-start').textContent = logs.length ? start + 1 : 0;
-            document.getElementById('log-pagination-end').textContent = end;
-            document.getElementById('log-pagination-total').textContent = logs.length;
-
-            document.getElementById('btn-log-prev').disabled = logPage === 1;
-            document.getElementById('btn-log-next').disabled = end >= logs.length;
-            
-            const numContainer = document.getElementById('log-pagination-numbers');
-            numContainer.innerHTML = `<span class="text-gray-500">Page <span class="text-gray-300 font-bold">${logPage}</span> of ${Math.ceil(logs.length / logLimit) || 1}</span>`;
+            document.getElementById('kill-page-info').textContent = `Page ${killPage} of ${totalPages}`;
+            document.getElementById('btn-kill-prev').disabled = killPage === 1;
+            document.getElementById('btn-kill-next').disabled = end >= globalCombatLogs.length;
         }
 
+        // Dropdown Logic
         function toggleDropdown(id, event) {
             event.stopPropagation();
             const el = document.getElementById(id);
+            if (!el) return;
             const targetState = el.classList.contains('hidden');
             
             document.getElementById('guild-dropdown').classList.add('hidden');
@@ -703,11 +679,11 @@
         }
 
         function handleFilterChange(type, checkbox) {
-            const set = type === 'guild' ? selectedGuilds : selectedAlliances;
+            const targetSet = type === 'guild' ? selectedGuilds : selectedAlliances;
             if (checkbox.checked) {
-                set.add(checkbox.value);
+                targetSet.add(checkbox.value);
             } else {
-                set.delete(checkbox.value);
+                targetSet.delete(checkbox.value);
             }
             filterAndSortPlayers();
         }
@@ -734,10 +710,12 @@
 
             ['kills', 'deaths', 'fame'].forEach(f => {
                 const icon = document.getElementById(`sort-icon-${f}`);
-                if (f === currentSortField) {
-                    icon.className = currentSortOrder === 'desc' ? 'fas fa-sort-down text-amber-500 text-[11px]' : 'fas fa-sort-up text-amber-500 text-[11px]';
-                } else {
-                    icon.className = 'fas fa-sort text-gray-600 text-[10px]';
+                if (icon) {
+                    if (f === currentSortField) {
+                        icon.className = currentSortOrder === 'desc' ? 'fas fa-sort-down text-amber-500 text-[11px]' : 'fas fa-sort-up text-amber-500 text-[11px]';
+                    } else {
+                        icon.className = 'fas fa-sort text-gray-600 text-[10px]';
+                    }
                 }
             });
 
@@ -746,19 +724,31 @@
 
         function setupDropdownDismissals() {
             window.addEventListener('click', () => {
-                document.getElementById('guild-dropdown').classList.add('hidden');
-                document.getElementById('alliance-dropdown').classList.add('hidden');
+                const gd = document.getElementById('guild-dropdown');
+                const ad = document.getElementById('alliance-dropdown');
+                if(gd) gd.classList.add('hidden');
+                if(ad) ad.classList.add('hidden');
             });
-            document.getElementById('guild-dropdown').addEventListener('click', e => e.stopPropagation());
-            document.getElementById('alliance-dropdown').addEventListener('click', e => e.stopPropagation());
+            document.getElementById('guild-dropdown')?.addEventListener('click', e => e.stopPropagation());
+            document.getElementById('alliance-dropdown')?.addEventListener('click', e => e.stopPropagation());
         }
 
-        // Pagination handlers
-        function changeAlliancePage(dir) { alliancePage += dir; renderAllianceTable(); }
-        function changeGuildPage(dir) { guildPage += dir; renderGuildTable(); }
-        function changePage(dir) { playerPage += dir; renderPlayerTable(); }
-        function goToPlayerPage(page) { playerPage = page; renderPlayerTable(); }
-        function changeCombatLogPage(dir) { logPage += dir; renderCombatLogs(); }
+        // Global Dynamic Interface Pagination router switcher
+        function changePage(targetModule, direction) {
+            if (targetModule === 'alliance') {
+                alliancePage += direction;
+                renderAllianceTable();
+            } else if (targetModule === 'guild') {
+                guildPage += direction;
+                renderGuildTable();
+            } else if (targetModule === 'player') {
+                playerPage += direction;
+                renderPlayerTable();
+            } else if (targetModule === 'kill') {
+                killPage += direction;
+                renderKillStreamTable();
+            }
+        }
 
         function showError(msg) {
             document.getElementById('detail-loading').classList.add('hidden');
@@ -766,6 +756,6 @@
             document.getElementById('error-message-text').textContent = msg;
             document.getElementById('error-panel').classList.remove('hidden');
         }
-</script>
+    </script>
 </body>
 </html>
