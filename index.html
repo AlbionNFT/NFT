@@ -268,7 +268,9 @@
 
             try {
                 // 1. Ask our backend if a valid session exists and get user info
-                const response = await fetch("/functions/check-session");
+                const response = await fetch("https://your-project-name.pages.dev/functions/check-session", {
+                    credentials: "include" // CRITICAL: This passes the cross-domain cookie securely!
+                });
                 
                 if (response.ok) {
                     const userData = await response.json();
